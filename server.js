@@ -49,12 +49,6 @@ io.on("connection", (socket) => {
 // -------------------------------------------
 // INICIAR CRONONET TCP (PASANDO IO)
 // -------------------------------------------
-const { startCronoNetServer } = require("./src/cronoNet");
-startCronoNetServer(io);
-
-// -------------------------------------------
-// INICIAR CRONONET TCP (PASANDO IO)
-// -------------------------------------------
 const RUN_MODE = (process.env.RUN_MODE || "local").toLowerCase();
 
 if (RUN_MODE === "local") {
@@ -64,6 +58,7 @@ if (RUN_MODE === "local") {
 } else {
   log("🌍 RUN_MODE=cloud → CronoNet DESACTIVADO");
 }
+
 // -------------------------------------------
 // INICIAR SERVIDOR HTTP
 // -------------------------------------------
