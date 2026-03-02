@@ -1,0 +1,33 @@
+:root{--bg:#060b18;--card:#0b1220;--line:#1e293b;--txt:#e5e7eb;--mut:#94a3b8}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt)}
+.topbar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);background:rgba(6,11,24,.92);backdrop-filter:blur(6px)}
+.h1{font-weight:800;letter-spacing:.5px}
+.sub{color:var(--mut);font-size:12px}
+.wrap{max-width:1100px;margin:14px auto;padding:0 14px;display:grid;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.row{display:flex;gap:10px;align-items:center;margin:8px 0}
+.row.right{justify-content:flex-end}
+label{width:70px;color:var(--mut);font-size:12px}
+input,select{flex:1;background:#0a1020;border:1px solid var(--line);color:var(--txt);padding:8px;border-radius:10px;outline:none}
+.btn{background:#111a2f;border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:10px;cursor:pointer}
+.btn:hover{filter:brightness(1.05)}
+.btn.green{background:#0f2a18;border-color:#134e2a}
+.btn.red{background:#2a1212;border-color:#7f1d1d}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.badge{background:#0a1020;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--mut);font-size:12px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.spacer{flex:1}
+.hint{color:var(--mut);font-size:12px;margin-top:8px}
+.tablecard{padding:0;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid var(--line);text-align:center}
+th{color:var(--mut);font-size:12px;background:#0a1020}
+tbody tr:hover{background:#0a1020}
+td.click{cursor:pointer;text-decoration:underline;text-decoration-style:dotted}
+.muted{color:var(--mut)}
+.small{font-size:12px}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:99999;padding:14px}
+.modalbox{width:min(520px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.modalhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.h2{font-weight:800}

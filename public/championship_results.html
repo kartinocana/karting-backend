@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Resultados</title>
+<style>
+body{background:#0b0f1a;color:white;font-family:Arial;}
+.container{padding:20px;max-width:1100px;margin:auto;}
+.card{background:#0f1420;padding:20px;border-radius:12px;margin-bottom:15px;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:8px;border-bottom:1px solid #1e2330;}
+button{padding:8px 10px;border:none;border-radius:8px;}
+.primary{background:#2563eb;color:white;}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h2>Resultados por carrera</h2>
+
+<div class="card">
+<label>Selecciona carrera</label>
+<select id="raceSelect" onchange="loadResults()"></select>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>Pos</th><th>Piloto</th><th>Vueltas</th>
+<th>Tiempo total</th><th>Mejor vuelta</th><th>Puntos</th>
+</tr>
+</thead>
+<tbody id="resBody">
+<tr><td colspan="6">Selecciona una carrera</td></tr>
+</tbody>
+</table>
+</div>
+
+<button class="primary" onclick="window.history.back()">⬅️ Volver</button>
+</div>
+
+<script>
+const API_BASE="http://localhost:4000/api";
+const params=new URLSearchParams(window.location.search);
+const champId=params.get("championshipId");
+
+async function loadRaces(){
+  const r = await fetch(`${API_BASE}/championships/${champId}/races`);
+  const races = await r.json();
+  raceSelect.innerHTML = `<option value="">-- Elige carrera --</option>`;
+  races.forEach(r=>{
+    raceSelect.innerHTML += `
+      <option value="${r.id}">
+        Ronda ${r.round_id} - ${r.event_name}
+      </option>`;
+  });
+}
+
+async function loadResults(){
+  const raceId = raceSelect.value;
+  if(!raceId) return;
+
+  const r = await fetch(`${API_BASE}/championships/${champId}/races/${raceId}/results`);
+  const rows = await r.json();
+
+  resBody.innerHTML = "";
+  rows.forEach((x,i)=>{
+    resBody.innerHTML += `
+      <tr>
+        <td>${x.position}</td>
+        <td>${x.driver_name}</td>
+        <td>${x.laps}</td>
+        <td>${(x.total_time_ms/1000).toFixed(2)}s</td>
+        <td>${(x.best_lap_ms/1000).toFixed(2)}s</td>
+        <td>${x.points}</td>
+      </tr>`;
+  });
+}
+
+loadRaces();
+</script>
+</body>
+</html>

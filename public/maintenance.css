@@ -1,0 +1,103 @@
+/* maintenance.css */
+
+:root{
+  --bg:#060a10;
+  --panel:#0b1118;
+  --panel2:#0e1722;
+  --border:#223245;
+  --text:#e6f0ff;
+  --muted:#8ea6c2;
+  --accent:#19a7ff;
+  --accent2:#00e1ff;
+  --danger:#ff5a6a;
+  --ok:#30d58f;
+  --warn:#ffcc66;
+}
+
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+a{color:inherit}
+
+.container{max-width:1400px;margin:0 auto;padding:16px}
+.header{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;border:1px solid var(--border);border-radius:16px;
+  background:linear-gradient(180deg,var(--panel),#070b11);
+}
+.header h2{margin:0;font-size:18px;letter-spacing:.2px}
+.header .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.subnav{
+  display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 16px;
+}
+.subnav a{
+  padding:8px 12px;border-radius:999px;border:1px solid var(--border);
+  background:var(--panel);text-decoration:none;color:#9fd3ff;
+}
+.subnav a.active{border-color:var(--accent);color:var(--text)}
+.subnav a:hover{border-color:var(--accent2);color:#fff}
+
+.kpis{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;margin-top:14px
+}
+@media (max-width: 1050px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width: 560px){.kpis{grid-template-columns:1fr;}}
+.kpi{
+  border:1px solid var(--border);border-radius:16px;background:var(--panel);
+  padding:12px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between
+}
+.kpi .label{color:var(--muted);font-size:12px}
+.kpi .value{font-size:22px;font-weight:700}
+.badge{padding:4px 10px;border-radius:999px;border:1px solid var(--border);color:var(--muted);font-size:12px}
+.badge.ok{border-color:rgba(48,213,143,.35);color:var(--ok)}
+.badge.warn{border-color:rgba(255,204,102,.35);color:var(--warn)}
+.badge.danger{border-color:rgba(255,90,106,.35);color:var(--danger)}
+
+.panel{
+  border:1px solid var(--border);border-radius:16px;background:var(--panel);
+  padding:14px;
+}
+.panel-title{margin:0 0 10px;font-size:14px;color:#bfe3ff}
+
+.toolbar{
+  position:sticky;top:10px;z-index:20;
+  border:1px solid var(--border);border-radius:16px;background:rgba(11,17,24,.92);
+  backdrop-filter: blur(8px);
+  padding:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:end;
+}
+.toolbar .field{display:flex;flex-direction:column;gap:6px;min-width:180px}
+.toolbar label{font-size:12px;color:var(--muted)}
+.toolbar input,.toolbar select, .toolbar textarea{
+  background:var(--panel2);border:1px solid var(--border);border-radius:10px;
+  color:var(--text);padding:9px 10px;outline:none;
+}
+.toolbar input:focus,.toolbar select:focus,.toolbar textarea:focus{border-color:var(--accent)}
+.toolbar .spacer{flex:1}
+
+.btn{
+  background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  border-radius:12px;padding:9px 12px;cursor:pointer;
+}
+.btn:hover{border-color:var(--accent2)}
+.btn.primary{border-color:rgba(25,167,255,.5);background:rgba(25,167,255,.1)}
+.btn.danger{border-color:rgba(255,90,106,.5);background:rgba(255,90,106,.08)}
+.btn.small{padding:6px 9px;border-radius:10px;font-size:12px}
+
+.table-wrap{
+  border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--panel);
+}
+table{width:100%;border-collapse:collapse}
+thead{background:rgba(255,255,255,.03)}
+th,td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;font-size:13px}
+th{color:#bfe3ff;font-weight:600}
+tr:hover td{background:rgba(255,255,255,.02)}
+.muted{color:var(--muted)}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.split{
+  display:grid;grid-template-columns:380px 1fr;gap:12px;margin-top:12px
+}
+@media (max-width: 1050px){.split{grid-template-columns:1fr}}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tab{padding:7px 10px;border-radius:999px;border:1px solid var(--border);background:var(--panel2);cursor:pointer;color:#9fd3ff}
+.tab.active{border-color:var(--accent);color:#fff}

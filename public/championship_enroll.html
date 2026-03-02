@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Inscribir pilotos por prueba</title>
+
+<style>
+body{background:#0b0f1a;color:white;font-family:Arial;}
+.container{padding:20px;max-width:1100px;margin:auto;}
+.card{background:#0f1420;padding:20px;border-radius:12px;margin-bottom:15px;}
+
+select,input{
+  width:100%;
+  padding:8px;
+  border-radius:8px;
+  background:#0b0f1a;
+  color:white;
+  border:1px solid #1e2330;
+}
+
+button{padding:8px 12px;border:none;border-radius:8px;cursor:pointer;}
+.primary{background:#2563eb;color:white;}
+
+table{width:100%;border-collapse:collapse;}
+th,td{padding:8px;border-bottom:1px solid #1e2330;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>Inscribir pilotos (por prueba y categoría)</h2>
+
+<div class="card">
+  <button class="primary" onclick="goBackToRounds()">⬅️ Volver a pruebas</button>
+</div>
+
+<!-- ===== FORMULARIO ===== -->
+<div class="card">
+
+<label>Prueba</label>
+<select id="enrollRoundSelect"></select>
+
+<label style="margin-top:8px;display:block">Categoría</label>
+<select id="enrollCategorySelect"></select>
+
+<label style="margin-top:8px;display:block">Buscar piloto</label>
+<input id="driverSearch" placeholder="Escribe nombre, apellido o nickname...">
+
+<label style="margin-top:8px;display:block">Piloto</label>
+<select id="enrollDriverSelect"></select>
+
+<label style="margin-top:8px;display:block">Kart</label>
+<select id="enrollKartSelect"></select>
+
+<button class="primary" style="margin-top:10px"
+onclick="enrollDriverToRoundCategory()">
+➕ Inscribir piloto
+</button>
+
+</div>
+
+<!-- ===== TABLA ===== -->
+<div class="card">
+
+<h3>Pilotos inscritos</h3>
+
+<table>
+<thead>
+<tr>
+<th>Piloto</th>
+<th>Categoría</th>
+<th>Peso</th>
+<th>Transponder</th>
+<th>Kart</th>
+<th>Acciones</th>
+</tr>
+</thead>
+
+<tbody id="enrolledBody">
+<tr><td colspan="6">Selecciona prueba</td></tr>
+</tbody>
+
+</table>
+
+</div>
+
+<!-- ===== RACE CONTROL ===== -->
+<div class="card">
+
+<h3>RaceControl</h3>
+
+<button onclick="createSessionAndSync()">
+🏁 Crear sesión y disputar prueba
+</button>
+
+<p style="margin-top:8px;font-size:0.9em;color:#9ca3af">
+✔️ Se creará la sesión automáticamente y se enviarán todos los pilotos inscritos.
+</p>
+
+</div>
+
+<!-- ⚠️ championship.js debe definir API_BASE UNA SOLA VEZ -->
+<script src="championship.js"></script>
+
+<!-- ============================================================
+     BUSCADOR PILOTOS (sin redeclarar API_BASE)
+     ============================================================ -->
+<script>
+let ALL_DRIVERS = [];
+
+function driverLabel(d){
+  const name = (d.name || "").trim();
+  const last = (d.lastname || "").trim();
+  const nick = (d.nickname || "").trim();
+
+  const full = (name + (last ? (" " + last) : "")).trim();
+  return nick ? `${full} (${nick})` : full;
+}
+
+function renderDriverOptions(list){
+  const sel = document.getElementById("enrollDriverSelect");
+  sel.innerHTML = "";
+
+  if (!list || !list.length){
+    sel.innerHTML = `<option value="">(sin resultados)</option>`;
+    return;
+  }
+
+  list.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.id;
+    opt.textContent = driverLabel(d);
+    sel.appendChild(opt);
+  });
+}
+
+async function loadAllDrivers(){
+  // Usa API_BASE del championship.js
+  const r = await fetch(`${API_BASE}/drivers`);
+  const d = await r.json();
+  ALL_DRIVERS = Array.isArray(d) ? d : [];
+  renderDriverOptions(ALL_DRIVERS);
+}
+
+function filterDrivers(q){
+  q = (q || "").trim().toLowerCase();
+  if (!q) return ALL_DRIVERS;
+
+  return ALL_DRIVERS.filter(d => {
+    const txt = (
+      (d.name || "") + " " +
+      (d.lastname || "") + " " +
+      (d.nickname || "")
+    ).toLowerCase();
+
+    return txt.includes(q);
+  });
+}
+
+function debounce(fn, ms=150){
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+const onSearch = debounce(() => {
+  const q = document.getElementById("driverSearch").value;
+  renderDriverOptions(filterDrivers(q));
+}, 120);
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadAllDrivers();
+  document.getElementById("driverSearch").addEventListener("input", onSearch);
+});
+</script>
+
+</div>
+
+<!-- ================= MODAL PILOTO ================= -->
+<div id="driverModal" style="display:none; position:fixed; inset:0;
+background:rgba(0,0,0,.6); z-index:9999;">
+
+<div style="background:#111;color:white;width:420px;margin:80px auto;
+padding:20px;border-radius:12px;">
+
+<h3>Editar piloto</h3>
+
+<input type="hidden" id="editDriverId"/>
+
+<label>Nombre</label>
+<input id="editName"><br><br>
+
+<label>Nickname</label>
+<input id="editNickname"><br><br>
+
+<label>Peso</label>
+<input id="editWeight" type="number"><br><br>
+
+<label>Transponder</label>
+<input id="editTransponder"><br><br>
+
+<label>Categoría</label>
+<input id="editSkill"><br><br>
+
+<div style="display:flex;gap:10px;justify-content:flex-end;">
+<button onclick="closeDriverModal()">Cancelar</button>
+<button onclick="saveDriverEdit()" style="background:#1e90ff;color:white;">
+Guardar
+</button>
+</div>
+
+</div>
+</div>
+
+<!-- ================= MODAL KART ================= -->
+<div id="kartModal" style="display:none; position:fixed; inset:0;
+background:rgba(0,0,0,.6); z-index:9999;">
+
+<div style="background:#111;color:white;width:420px;margin:80px auto;
+padding:20px;border-radius:12px;">
+
+<h3>Cambiar kart</h3>
+
+<input type="hidden" id="editEnrollId"/>
+
+<label>Nuevo kart</label>
+<select id="changeKartSelect"></select>
+
+<div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+<button onclick="closeKartModal()">Cancelar</button>
+<button onclick="saveKartChange()" style="background:#1e90ff;color:white;">
+Guardar
+</button>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

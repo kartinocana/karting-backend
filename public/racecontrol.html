@@ -1,0 +1,4539 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Race Control Pro</title>
+  
+<img id="track-logo" src="logo.jpg" style="display:none">
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+  <style>
+:root { font-family: system-ui, sans-serif; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin:0; background:#020617; color:#e5e7eb; }
+
+/* ===================== HEADER (AJUSTADO SIN ROMPER NADA) ===================== */
+.header-pro {
+  display: grid;
+  grid-template-columns: 1fr minmax(320px, 1.2fr) 1fr;
+  align-items: start;
+  width: 100%;        /* ← cambio CLAVE (quitamos 100vw) */
+  max-width: 100%;
+  padding: 12px 16px;
+  background:#020617;
+  border-bottom:1px solid #1f2937;
+  gap: 16px;
+}
+
+.header-left { display:flex; flex-direction:column; gap:4px; min-width: 260px; }
+.title { font-size:0.8rem; color:#9ca3af; letter-spacing:0.15em; }
+.session-name { font-size:1.15rem; font-weight:600; }
+
+.badges { display:flex; gap:0.35rem; flex-wrap:wrap; font-size:0.75rem; }
+.badge {
+  border-radius:999px;
+  border:1px solid #374151;
+  padding:0.45rem 1rem;     /* MÁS ESPACIO */
+  background:#020617;
+
+  font-size:1.05rem;        /* TEXTO MÁS GRANDE */
+  font-weight:600;
+  letter-spacing:0.03em;
+
+  display:flex;
+  align-items:center;
+}
+
+.badge.flag-green{border-color:#22c55e;color:#bbf7d0;}
+.badge.flag-yellow{border-color:#eab308;color:#facc15;}
+.badge.flag-red{border-color:#ef4444;color:#fecaca;}
+.badge.flag-checkered{border-color:#e5e7eb;}
+
+.header-center { display:flex; flex-direction:column; gap:6px; align-items:center; min-width: 320px; }
+
+.header-right {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  max-width: 100%;
+}
+
+#race-timer-header{
+  display:inline-block;
+  font-size:1.9rem;
+  font-weight:700;
+  color:#22c55e;
+  min-width:190px;
+  text-align:right;
+  white-space:nowrap;
+  font-family:"Courier New", monospace;
+}
+
+/* ===================== CONTROLES ===================== */
+select, input {
+  background:#020617; border-radius:999px; border:1px solid #4b5563;
+  color:#e5e7eb; padding:0.3rem 0.6rem; font-size:0.85rem;
+  outline: none;
+}
+input[type="number"]{ -moz-appearance: textfield; }
+input::-webkit-outer-spin-button, 
+input::-webkit-inner-spin-button { -webkit-appearance: none; margin:0; }
+
+label { display:block; font-size:0.75rem; color:#9ca3af; margin: 10px 0 6px; }
+.helper { font-size:0.75rem; color:#94a3b8; margin-top:6px; }
+
+/* ===================== BOTONES ===================== */
+.btn-group{display:flex; gap:0.4rem; flex-wrap:wrap; justify-content:center;}
+.btn {
+  border-radius:999px; border:1px solid #4b5563;
+  background:#111827; color:#e5e7eb; padding:0.35rem 0.9rem;
+  cursor:pointer; font-size:0.85rem;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.start{background:#22c55e;color:#111827;border-color:#22c55e;}
+.btn.pause{background:#eab308;color:#111827;border-color:#eab308;}
+.btn.finish{background:#ef4444;color:#111827;border-color:#ef4444;}
+
+.icon-btn{font-size:2rem; cursor:pointer; padding:6px 10px; border-radius:10px;}
+.icon-btn:hover{background:#1e293b;}
+
+/* ===================== LIVE TIMING ===================== */
+main{padding:1.25rem; display:grid; gap:1.25rem;}
+.card{
+  background:#0f172a; border-radius:1rem; border:1px solid #1f2937;
+  padding:1.2rem;
+}
+.card-title{font-weight:700; margin-bottom: 6px;}
+table{width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:0.6rem;}
+th,td{padding:0.35rem 0.45rem; text-align:left;}
+thead{background:#020617; border-bottom:1px solid #1f2937;}
+th{font-size:0.7rem; color:#9ca3af; letter-spacing:0.12em;}
+tbody tr:nth-child(odd){background:#020617;}
+tbody tr:nth-child(even){background:#030712;}
+tr.leader{box-shadow: inset 3px 0 0 #22c55e;}
+
+/* ===================== PANEL PARRILLA (SIN CAMBIOS) ===================== */
+#panel-registros{
+  position:fixed; top:90px; right:20px; width:420px;
+  max-height:85vh; overflow:auto;
+  background:#0f172a; border:1px solid #1f2937; border-radius:12px;
+  padding:1rem; opacity:0; pointer-events:none; transition:.25s; z-index:9999;
+}
+#panel-registros.visible{opacity:1; pointer-events:auto;}
+#panel-registros .drag-header{
+  padding:6px; background:#1e293b; border-radius:6px;
+  text-align:center; cursor:move; margin-bottom:10px; font-size:.75rem; color:#94a3b8;
+}
+
+/* ===================== EDITOR PARRILLA (SIN CAMBIOS) ===================== */
+#grid-editor{
+  position:fixed;
+  top:110px;
+  right:460px;
+  width:360px;
+  max-width: calc(100vw - 40px);
+  background:#0f172a;
+  border:1px solid #1f2937;
+  border-radius:14px;
+  padding:14px 14px 12px;
+  z-index:10001;
+  display:none;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+
+/* ===================== PANEL VOZ (SIN CAMBIOS) ===================== */
+#voice-panel{
+  position:fixed; top:90px; right:460px; width:260px;
+  background:#0f172a; border:1px solid #1e293b; border-radius:12px;
+  padding:15px; display:none; z-index:9999;
+}
+/* ===== HEADER RIGHT: estética pro ===== */
+.header-right{
+  display: flex;
+  flex-direction: column;      /* 👈 en columna */
+  align-items: flex-end;       /* 👈 todo a la derecha */
+  gap: 8px;
+  min-width: 260px;
+}
+
+/* botón enviar resultados (sin tocar tu HTML) */
+.header-right .green{
+  width: auto !important;      /* 👈 que no ocupe todo */
+  max-width: 320px;
+  padding: 8px 12px !important;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #111827;
+  color: #e5e7eb;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.header-right .green:hover{
+  background:#0b1220;
+  border-color:#475569;
+}
+
+/* timer más pro */
+#race-timer-header{
+  font-size: 2.1rem;           /* un pelín más grande */
+  line-height: 1;
+  letter-spacing: 0.06em;
+  min-width: 210px;            /* para que no “salte” */
+  text-align: right;
+}
+
+/* fila para iconos (sin cambiar HTML) */
+.header-right .icon-btn{
+  align-self: flex-end;
+}
+
+/* opcional: compactar el header entero en pantallas pequeñas */
+@media (max-width: 1100px){
+  .header-pro{
+    grid-template-columns: 1fr;   /* una columna */
+  }
+  .header-left, .header-center, .header-right{
+    align-items: center;
+  }
+  .header-right{
+    align-items: center;
+  }
+  #race-timer-header{
+    text-align:center;
+  }
+}
+/* ===== CENTRO EN UNA SOLA FILA ===== */
+
+.header-center{
+  display:flex;
+  flex-direction:row;       /* 👈 antes columna */
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:10px;
+  min-width:auto;
+}
+
+/* todos los grupos de botones en línea */
+.header-center .btn-group{
+  display:flex;
+  flex-direction:row;
+  gap:6px;
+  flex-wrap:nowrap;         /* 👈 NO saltar línea */
+}
+
+/* selects alineados */
+.header-center select{
+  height:34px;
+}
+
+/* ===== RELOJ MUCHO MÁS GRANDE ===== */
+
+#race-timer-header{
+  font-size:3.4rem;          /* 👈 tamaño grande tipo marcador */
+  font-weight:800;
+  letter-spacing:0.08em;
+  color:#22c55e;
+  text-shadow:
+    0 0 6px rgba(34,197,94,0.6),
+    0 0 14px rgba(34,197,94,0.3);
+  min-width:320px;
+}
+
+/* opcional: estilo display digital */
+#race-timer-header{
+  font-family:"Courier New", monospace;
+}
+
+/* ===== SI NO CABE EN PANTALLAS PEQUEÑAS ===== */
+@media (max-width:1300px){
+  .header-center{
+    flex-wrap:wrap;
+  }
+}
+/* ✅ Menú contextual (Editar/Borrar vuelta) oculto y flotante */
+#edit-lap-menu{
+  display: none;          /* 👈 clave: no se ve hasta que JS lo muestre */
+  position: fixed;        /* 👈 fuera del flujo (no crea “barras”) */
+  z-index: 10050;
+  left: 0;
+  top: 0;
+}
+
+.auto-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+
+  flex-wrap:nowrap;        /* 🔴 IMPIDE QUE BAJE GUARDAR */
+  overflow-x:auto;         /* si no entra, scroll horizontal suave */
+  padding-bottom:4px;
+}
+
+/* controles flexibles */
+.auto-row select,
+.auto-row input{
+  height:36px;
+  min-width:0;
+}
+
+/* tamaños reales (ajusta si quieres) */
+
+#auto-enabled{ width:110px; }
+#auto-led-mode{ width:120px; }
+#auto-finish-mode{ width:120px; }
+
+#auto-race-minutes{ width:70px; }
+#auto-race-laps{ width:80px; }
+#post-finish-safety{ width:95px; }
+
+/* 🔴 CLAVE: botón no puede encogerse */
+.auto-row button{
+  flex-shrink:0;
+  white-space:nowrap;
+}
+/* ===== BOTÓN LED ACTIVO ===== */
+.btn.flag.active {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+  color: #111827 !important;
+  box-shadow: 0 0 12px rgba(34,197,94,0.6);
+}
+/* LED activo (solo estos botones) */
+.btn.flag.active-led{
+  background:#22c55e !important;
+  border-color:#22c55e !important;
+  color:#111827 !important;
+  box-shadow:0 0 12px rgba(34,197,94,0.6);
+}
+  </style>
+</head>
+
+<body>
+
+<header class="header-pro">
+  <div class="header-left">
+    <div class="title">RACE CONTROL PRO</div>
+    <div id="session-name" class="session-name">Sin sesión</div>
+
+    <div class="badges">
+      <span class="badge" id="badge-status">Estado: -</span>
+      <span class="badge" id="badge-flag">Bandera: -</span>
+      <span class="badge" id="badge-participants">Participantes: -</span>
+      <span class="badge" id="badge-leader">Líder: V 0</span>
+	  <div class="icon-btn" onclick="togglePanel()" title="Inscripciones / Parrilla">🏎️</div>
+    <div class="icon-btn" onclick="toggleVoicePanel()" title="Ajustes de voz">🔊</div>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <select id="session-select" class="session-select"></select>
+
+    <select id="ranking-mode" onchange="applyCategoryFilter()">
+      <option value="race">Modo Carrera</option>
+      <option value="qualy">Modo Qualy</option>
+    </select>
+<!-- ===== AUTO TANDAS ===== -->
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+  <label style="margin:0; font-size:.75rem; color:#9ca3af;">Crono auto o manual</label>
+
+  <select id="auto-enabled">
+    <option value="off">Manual</option>
+    <option value="on">Auto</option>
+  </select>
+
+  <select id="auto-led-mode" title="Qué LED activar al arrancar">
+    <option value="none">Sin LED</option>
+    <option value="alquiler">ALQUILER</option>
+    <option value="junior">JUNIOR</option>
+  </select>
+  <label style="margin:0; font-size:.75rem; color:#9ca3af;">selec tiempo pantalla</label>
+<div class="auto-row">
+
+ 
+
+ <label style="margin:0; font-size:.75rem; color:#9ca3af;">Fin de carrera en Auto </label>
+
+  <select id="auto-finish-mode">
+    <option value="time">Por tiempo</option>
+    <option value="laps">Por vueltas</option>
+  </select>
+
+  <input id="auto-race-minutes" type="number" min="1" placeholder="min">
+
+  <input id="auto-race-laps" type="number" min="1" placeholder="vueltas">
+<input id="post-finish-safety"
+       type="number"
+       min="0"
+       step="1"
+       placeholder="seg oscu">
+
+<span id="post-finish-countdown"
+      style="min-width:60px; display:inline-block; text-align:center;
+             font-weight:800; font-size:1rem; color:#fbbf24;">
+</span>
+
+<button class="btn"
+  onclick="setPostFinishSafetyMs(document.getElementById('post-finish-safety').value)">
+  Guardar
+</button>
+
+<label style="margin:0; font-size:.7rem; color:#9ca3af;">
+  Tiempo deco no detecta en auto
+</label>
+</div>
+
+ 
+</div>
+    <div class="btn-group">
+<button class="btn start" onclick="startRace()">Start</button>
+<button class="btn pause" onclick="pauseRace(this)">Pause</button>
+<button class="btn finish" onclick="finishRace()">Finish</button>
+ </div>
+
+  <div class="btn-group">
+<button class="btn flag" onclick="ledSendPro(10, this)">OF</button>
+<button class="btn flag" onclick="ledSendPro(29, this)">ALQUILER</button>
+<button class="btn flag" onclick="ledSendPro(33, this)">JUNIOR</button>
+<button class="btn flag" onclick="ledSendPro(17, this)">2V</button>
+<button class="btn flag" onclick="ledSendPro(18, this)">1V</button>
+<button class="btn flag" onclick="ledSendPro(11, this)">CUADROS</button>
+<button class="btn flag" onclick="ledSendPro(16, this)">ROJO</button>
+<button class="btn flag" onclick="ledSendPro(20, this)">VERDE</button>
+<button class="btn flag" onclick="ledSendPro(19, this)">ATENCION SALIDA</button>
+
+    </div>
+
+<div class="btn-group">
+
+
+</div>                 
+  </div>
+
+  <!-- ✅ ESTA COLUMNA FALTABA (header-right) -->
+  <div class="header-right">
+    <button
+      class="green"
+      style="margin-top:12px; width:100%;"
+      onclick="importSessionToChampionship()"
+    >🏆 Enviar resultados al Campeonato</button>
+
+    <div id="race-timer-header" class="timer-small">00:00:00.000</div>
+  </div>
+</header>
+
+
+<main>
+  <section class="card">
+    <div class="card-title">Live Timing Pro</div>
+
+    <div class="pill-row">
+      <span><strong>Sesión:</strong> <span id="pill-session-id">-</span></span>
+      <span><strong>Karts:</strong> <span id="pill-karts">-</span></span>
+      <span><strong>Vueltas líder:</strong> <span id="pill-leader-laps">0</span></span>
+      <span><strong>Best lap:</strong> <span id="pill-best-lap">-</span></span>
+    </div>
+
+   <!-- ===== CONTROLES DE TIEMPO Y PDF ===== -->
+<div class="field" style="margin-top:0.6rem;">
+  <label>Tiempo mínimo de vuelta (s)</label>
+
+  <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+    <input id="min-lap-input" type="number" style="width:120px;">
+    <button class="btn" onclick="saveMinLap()">Guardar</button>
+
+    <button onclick="exportClassificationPDF_v2()">📄 PDF Clasificación</button>
+    <button onclick="exportLapByLapPDF()">📄 PDF Vuelta a vuelta</button>
+    <button onclick="exportOnePageReportPDF()">📄 PDF Informe completo</button>
+
+    
+  </div>
+</div>
+
+<!-- ===== PANEL IMPRESIÓN (FUERA DEL FIELD) ===== -->
+<section class="card" id="print-options" style="margin-top:1rem; display:none;">
+  <div class="card-title">Opciones de impresión</div>
+
+  <div class="print-columns" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:6px;">
+    <label><input type="checkbox" data-pdf-col="position" checked> Posición</label>
+    <label><input type="checkbox" data-pdf-col="number" checked> Nº</label>
+    <label><input type="checkbox" data-pdf-col="pilot" checked> Piloto</label>
+    <label><input type="checkbox" data-pdf-col="nick" checked> Nick</label>
+    <label><input type="checkbox" data-pdf-col="weight" checked> Peso</label>
+    <label><input type="checkbox" data-pdf-col="category" checked> Categoría</label>
+    <label><input type="checkbox" data-pdf-col="laps" checked> Vueltas</label>
+    <label><input type="checkbox" data-pdf-col="lastLap"> Última vuelta</label>
+    <label><input type="checkbox" data-pdf-col="bestLap" checked> Mejor vuelta</label>
+    <label><input type="checkbox" data-pdf-col="total" checked> Tiempo total</label>
+    <label><input type="checkbox" data-pdf-col="gap" checked> GAP</label>
+    <label><input type="checkbox" data-pdf-col="diff" checked> Diferencia</label>
+    <label><input type="checkbox" data-pdf-col="media"> Media</label>
+    <label><input type="checkbox" data-pdf-col="consistency" checked> Consistencia</label>
+  </div>
+</section>
+
+<div class="btn-group" style="margin-top:0.8rem;">
+  <button class="btn" onclick="showPresentation()">Presentación</button>
+  <button class="btn" onclick="toggleLapsPanel()">Control vueltas</button>
+  <button class="btn" onclick="openWebOutput()">Web output</button>
+  <button class="btn" onclick="togglePrintOptions()">🖨 Opciones impresión</button>
+</div>
+
+
+    <table>
+    <thead>
+  <tr>
+    <th></th>
+    <th>Pos</th>
+    <th>Numero</th>
+    <th>Piloto</th>
+    <th>Nick</th>
+    <th>Peso</th>
+    <th>Categoria</th>
+    <th>Vueltas</th>
+    <th>Última</th>
+    <th>Mejor</th>
+    <th>Total</th>
+    <th>GAP</th>
+    <th>DIFF</th>
+    <th>Media</th>
+    <th>Consist.</th>
+    <th>Trasponder</th>
+  </tr>
+</thead>
+
+
+      <tbody id="timing-body">
+  <tr><td colspan="16">Sin datos</td></tr>
+  
+  
+  <!-- ===== POPUP AVERÍAS / ALERTAS ===== -->
+<div id="rc-toast" style="display:none; position:fixed; right:16px; bottom:16px; z-index:20000; max-width:420px;">
+  <div id="rc-toast-box" style="background:#0b1220; border:1px solid rgba(148,163,184,.25); border-radius:14px; padding:14px 14px; box-shadow:0 12px 45px rgba(0,0,0,.55);">
+    <div id="rc-toast-title" style="font-weight:800; margin-bottom:6px;">Aviso</div>
+    <div id="rc-toast-msg" style="opacity:.92; line-height:1.35;"></div>
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+      <button class="btn" onclick="hideRCTOAST()">Cerrar</button>
+    </div>
+  </div>
+</div>
+</tbody>
+
+    </table>
+	<section class="card" id="lap-by-lap-card">
+  <div class="card-title">Vuelta a vuelta</div>
+
+  <div style="overflow:auto;">
+    <table id="lap-by-lap-table">
+      <thead id="lap-by-lap-head"></thead>
+      <tbody id="lap-by-lap-body"></tbody>
+    </table>
+  </div>
+</section>
+
+  </section>
+</main>
+
+<!-- ===== Panel Inscripciones / Parrilla ===== -->
+<section class="card" id="panel-registros">
+  <div class="drag-header">🟦 Panel de parrilla — Arrastrar / F2 / Casco 🏎️</div>
+
+  <div class="card-title">Parrilla (entries)</div>
+
+  <table class="participants-table" style="margin-top:0.6rem;">
+    <thead>
+      <tr>
+        <th>Grid</th>
+        <th>Piloto</th>
+        <th>TR Piloto</th>
+        <th>Kart</th>
+        <th>TR Kart</th>
+        <th style="width:120px;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="participants-body">
+      <tr><td colspan="6">Sin participantes</td></tr>
+    </tbody>
+  </table>
+
+  <div class="helper">Añade un piloto/kart a la sesión y asigna su posición de salida (grid). Luego edita desde ⚙️.</div>
+
+  <!-- PILOTO -->
+  <div class="field">
+    <label>Piloto</label>
+    <input id="search-driver" class="small-input" type="text" placeholder="Buscar piloto...">
+    <div id="driver-suggest" class="suggest"></div>
+    <div class="helper" id="driver-picked">-- Sin piloto --</div>
+  </div>
+
+  <!-- KART -->
+  <div class="field">
+    <label>Kart</label>
+    <input id="search-kart" class="small-input" type="text" placeholder="Buscar kart...">
+    <div id="kart-suggest" class="suggest"></div>
+    <div class="helper" id="kart-picked">-- Sin kart --</div>
+  </div>
+
+  <div class="field">
+    <label>Posición de salida (Grid)</label>
+    <input id="grid-position" type="number" min="1" placeholder="Ej: 1">
+    <div class="helper">Si lo dejas vacío, entrará sin grid.</div>
+  </div>
+
+  <button id="add-entry-btn" class="btn" style="margin-top:0.7rem;" onclick="addEntryToGrid()">
+    Añadir a parrilla
+  </button>
+
+  <!-- SEMÁFORO LOCAL -->
+  <div style="margin-top:1.2rem;">
+    <div class="card-title">Semáforo local</div>
+    <div id="countdown" class="countdown">LISTO</div>
+    <div class="helper">Solo visual, no afecta al backend.</div>
+
+    <div style="margin-top:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+      <button class="btn" onclick="startCountdown(5)">5s</button>
+      <button class="btn" onclick="startCountdown(10)">10s</button>
+      <button class="btn" onclick="startCountdown(30)">30s</button>
+      <button class="btn" onclick="resetCountdown()">Reset</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Panel editor de parrilla (edición total) ===== -->
+<div id="grid-editor">
+  <div class="top">
+    <div>
+      <div class="card-title" style="margin:0;">Editar participante</div>
+      <div id="grid-editor-sub" class="helper" style="margin-top:2px;">—</div>
+    </div>
+    <div class="close-x" onclick="closeGridEditor()" title="Cerrar">✖</div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label>Grid</label>
+      <input id="edit-grid" type="number" min="1" placeholder="Ej: 1">
+    </div>
+
+    <div>
+      <label>Kart</label>
+      <select id="edit-kart"></select>
+    </div>
+  </div>
+
+  <label>Nombre visible (Piloto)</label>
+  <input id="edit-name" placeholder="Nombre mostrado en carrera">
+
+  <label>Transponder Piloto</label>
+  <input id="edit-transponder" placeholder="ID transponder piloto">
+
+  <div class="helper">
+    Cambiar kart por avería: selecciona otro kart y guarda. No se borra la entry.
+  </div>
+
+  <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+    <button class="btn" onclick="closeGridEditor()">Cancelar</button>
+    <button class="btn start" onclick="saveGridEdit()">Guardar</button>
+  </div>
+</div>
+
+<!-- ===== PANEL VOZ ===== -->
+<div id="voice-panel">
+  <h3>Ajustes de voz</h3>
+
+  <label style="margin-top:0;"><input type="checkbox" id="voice-enabled"> Activar voz</label>
+
+  <label>Modo</label>
+  <select id="voice-mode">
+    <option value="kart">Kart</option>
+    <option value="driver">Piloto</option>
+    <option value="both">Ambos</option>
+  </select>
+
+  <label>Velocidad</label>
+  <input type="range" id="voice-rate" min="0.5" max="1.5" step="0.1">
+
+  <label>Volumen</label>
+  <input type="range" id="voice-volume" min="0" max="1" step="0.1">
+</div>
+
+<!-- ===== MENÚ CONTEXTUAL VUELTAS ===== -->
+<div id="edit-lap-menu">
+  <div style="background:#020617;border:1px solid #4b5563;border-radius:8px;padding:6px;min-width:200px;">
+    <button class="btn" style="width:100%;margin-bottom:4px;" onclick="editLapFromTiming()">✏ Editar tiempo</button>
+    <button class="btn" style="width:100%;background:#ef4444;border-color:#ef4444;" onclick="deleteLapFromTiming()">🗑 Borrar vuelta</button>
+  </div>
+</div>
+
+<!-- ===== PANEL HISTORIAL DE VUELTAS ===== -->
+<section id="laps-panel" class="card" style="position:fixed; top:70px; left:20px; width:420px; max-height:80vh; overflow:auto; z-index:9998; display:none;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+    <div class="card-title">Historial de vueltas</div>
+    <button class="btn" onclick="closeLapsPanel()">Cerrar</button>
+  </div>
+
+  <div id="laps-panel-header" class="helper">Piloto / Kart</div>
+
+  <table class="participants-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Tiempo</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="laps-panel-body">
+      <tr><td colspan="3" class="muted">Sin vueltas</td></tr>
+    </tbody>
+  </table>
+</section>
+<script src="http://localhost:4000/socket.io/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ================= SOCKET.IO =================
+const socket = io("http://localhost:4000", {
+  transports: ["websocket"],
+  upgrade: false
+});
+
+
+
+// ================= CONTROL DE VUELTAS (GLOBAL) =================
+// ===== NUEVO MODELO SEGURO PARA CONVIVENCIA =====
+const lastLapAtByPid = {};      // referencia estable por piloto
+const lastSeenAtByPid = {};     // última pasada REAL vista (sin tocar referencia)
+        // antirebote por tiempo (ms)
+const lastRawTimeByPid = {};      // último tiempo crudo recibido (opcional)
+const lastLapNumberByPid = {};    // ya no se usa, pero se deja por seguridad
+const lastKeyPressAtByPid = {};
+const recalcBtn = document.getElementById("recalcChampBtn");
+
+
+
+// ===============================
+// 🧹 Reset SOLO crono físico
+// ===============================
+function resetPhysicalStateForPid(pid) {
+  delete lastLapAtByPid[pid];
+  delete lastRawTimeByPid[pid];
+}
+
+// ================= SIMULADOR TRANSPONDER POR TECLADO =================
+
+const keyMap = {
+  "a": "76699",
+  "s": "76698"
+};
+
+document.addEventListener("keydown", async (e) => {
+  const key = e.key.toLowerCase();
+  if (!keyMap[key]) return;
+
+  const transponderId = keyMap[key];
+
+  const p = participantsCache.find(
+    x => String(x.transponder) === String(transponderId)
+  );
+  if (!p) return;
+
+  const now = Date.now();
+
+  // ⏱️ ARRANCA LA CARRERA AL PRIMER TOQUE (solo en AUTO)
+ if (
+  AUTO.enabled &&
+  currentSession.status !== "running" &&
+  !racePaused &&              // ✅ si has “parado/detenido”, NO auto-start
+  !isPostFinishLocked()       // ✅ respeta tiempo seguridad
+) {
+  await startRaceAuto();
+}
+
+  // ⏸️ SI ESTÁ EN PAUSA:
+  if (racePaused) {
+    lastKeyPressAtByPid[p.id] = now;
+    return;
+  }
+
+  const last = lastKeyPressAtByPid[p.id];
+
+  // 🟡 Primera pulsación → referencia (PERO YA ARRANCA EL CRONO DE CARRERA)
+  if (!last) {
+    lastKeyPressAtByPid[p.id] = now;
+    console.log("⏱ Inicio simulador", p.driver_name);
+
+    // (opcional pero recomendado) registrar "paso 0" para que el sistema
+    // tenga una marca inicial sin contar como vuelta
+    fetch(`${API}/timing-input/crononet`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transponder: transponderId,
+        timestamp: new Date().toISOString(),
+        lap_time_ms: 0
+      })
+    }).catch(()=>{});
+
+    processLap({
+      session_id: currentSession.id,
+      participant_id: p.id,
+      lap_time_ms: 0
+    });
+
+    renderLiveFromLatest();
+    renderLapByLap();
+    return;
+  }
+
+  // ⏱ Vuelta simulada
+  const lapMs = now - last;
+  lastKeyPressAtByPid[p.id] = now;
+
+  // 🧹 Resetear SOLO el crono físico
+  resetPhysicalStateForPid(p.id);
+
+  // 🔹 👉 GUARDAR EN BASE DE DATOS
+  fetch(`${API}/timing-input/crononet`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transponder: transponderId,
+      timestamp: new Date().toISOString(),
+      lap_time_ms: lapMs
+    })
+  })
+    .then(r => r.json())
+    .then(d => console.log("Vuelta guardada en BD:", d))
+    .catch(err => console.error("Error enviando vuelta:", err));
+
+  // ➕ Añadir vuelta SOLO al frontend
+  processLap({
+    session_id: currentSession.id,
+    participant_id: p.id,
+    lap_time_ms: lapMs
+  });
+
+  renderLiveFromLatest();
+  renderLapByLap();
+
+  // (si usas auto-finish por vueltas, aquí también va bien)
+  if (typeof checkAutoFinishByLaps === "function") checkAutoFinishByLaps();
+});
+
+
+
+
+
+
+// ===============================
+// ⏱️ RAW PASS DESDE CRONONET
+// ===============================
+// ===============================
+// 🔎 Buscar participante por transponder
+// ===============================
+function findParticipantIdByTransponder(transponder) {
+  if (!transponder) return null;
+
+  const t = String(transponder).trim();
+
+  const p = participantsCache.find(
+    x => String(x.transponder).trim() === t
+  );
+
+  return p ? p.id : null;
+}
+
+socket.on("raw-pass", async data => {
+  console.log("📡 RAW-PASS:", data);
+
+  if (!currentSession) return;
+
+ // 🤖 AUTO-START: primer paso por meta inicia la tanda
+if (
+  AUTO.enabled &&
+  currentSession.status !== "running" &&
+  !racePaused &&
+  !isPostFinishLocked()
+) {
+  await startRaceAuto();
+}
+
+  if (currentSession.status !== "running") return;
+
+  const pid = findParticipantIdByTransponder(data.transponder);
+  if (!pid) {
+    console.warn("⛔ Transponder sin participante:", data.transponder);
+    return;
+  }
+
+  const now = Number(data.timestamp);
+  if (!Number.isFinite(now)) return;
+
+  // Guardamos SIEMPRE la última pasada vista (para diagnóstico)
+  lastSeenAtByPid[pid] = now;
+
+  // ⏸️ SI ESTÁ EN PAUSA:
+  // NO registrar vuelta, pero SÍ actualizar referencia
+  // para que NO se sume el tiempo de pausa al lapMs.
+  if (racePaused) {
+    lastLapAtByPid[pid] = now;
+    return;
+  }
+
+  const prev = lastLapAtByPid[pid];
+
+  // ===== CASO 1: PRIMERA VEZ QUE VEMOS ESTE PILOTO =====
+  if (!prev) {
+    lastLapAtByPid[pid] = now;
+
+    const p = participantsCache.find(x => x.id === pid);
+    if (!p) return;
+
+    p.lapTimes ??= [];
+    p.lapTimes.push({ ms: 0, valid: false });
+
+    p.laps = 0;
+    p.lastLapMs = null;
+    p.bestLapMs = null;
+    p.totalMs = null;
+
+    renderLiveFromLatest();
+    persistState();
+    renderLapByLap();
+    return;
+  }
+
+  // ===== CALCULAR VUELTA REAL =====
+  const lapMs = now - prev;
+
+  // Antirebote duro (ruido o duplicados)
+  if (lapMs < 1200) return;
+
+  // Tiempo mínimo configurable
+  if (lapMs < minLapMs) {
+    // OJO: NO cambiamos la referencia → evitamos desincronía con otro sistema
+    return;
+  }
+
+  // ✅ VUELTA VÁLIDA → AHORA SÍ actualizamos referencia
+  lastLapAtByPid[pid] = now;
+
+  const p = participantsCache.find(x => x.id === pid);
+  if (!p) return;
+
+  p.lapTimes ??= [];
+  p.lapTimes.push({ ms: lapMs, valid: true });
+
+  // Recalcular stats limpias
+  recalcParticipantStats(p);
+
+  console.log(`✅ VUELTA REAL → PID ${pid} | V ${p.laps} | ${lapMs}ms`);
+
+  persistLap({
+    session_id: currentSession.id,
+    driver_id: p.driver_id,
+    kart_id: p.kart_id,
+    lap_number: p.laps,
+    lap_time_ms: lapMs,
+    sector1_ms: null,
+    sector2_ms: null,
+    sector3_ms: null
+  });
+
+  renderLiveFromLatest();
+  persistState();
+  renderLapByLap();
+});
+
+async function persistLap(lap) {
+  try {
+    const res = await fetch(`${API}/sessions/${lap.session_id}/laps`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lap)
+    });
+
+    if (!res.ok) {
+      console.warn("⚠️ Backend no guardó la vuelta:", await res.text());
+    }
+  } catch (e) {
+    console.warn("⚠️ Error enviando vuelta al backend:", e);
+  }
+}
+
+
+
+
+// ================= UTILIDADES =================
+
+// 🏆 Mejor vuelta global
+function getGlobalBestLap() {
+  let best = null;
+
+  for (const p of participantsCache) {
+    const t = Number(p.bestLapMs);
+    if (!t || t <= 0) continue;
+
+    if (best === null || t < best) {
+      best = t;
+    }
+  }
+
+  return best;
+}
+
+
+// 📊 Clasificación actual
+function buildClassification() {
+
+  // 🔎 Modo ranking actual
+  const rankingMode =
+    document.getElementById("ranking-mode")?.value || "race";
+
+
+
+  // 🟡 ===== MODO QUALY (MANDA MEJOR VUELTA) =====
+  if (rankingMode === "qualy") {
+
+    const withBest = participantsCache
+      .filter(p => typeof p.bestLapMs === "number" && p.bestLapMs > 0)
+      .sort((a, b) => {
+        // 1️⃣ Mejor vuelta manda
+        if (a.bestLapMs !== b.bestLapMs) {
+          return a.bestLapMs - b.bestLapMs;
+        }
+        // 2️⃣ Desempate: quién la hizo antes
+        const ai = a.lapTimes?.indexOf(a.bestLapMs) ?? 0;
+        const bi = b.lapTimes?.indexOf(b.bestLapMs) ?? 0;
+        return ai - bi;
+      });
+
+return participants.map((p, i) => {
+
+  const gap = "-";
+  const diff = "-";
+  const mean = null;
+  const consistency = null;
+
+  return {
+    participant_id: p.id,
+    pos: i + 1,
+
+    racerName: p.driver_name || "-",
+
+    racerNumber: getRacerNumber(p),   // 👈 NÚMERO FINAL
+    nickname: p.nickname ?? "-",
+
+    racerTransponder: p.transponder ?? "-",
+
+    category: getRacerCategory(p),
+    weight: p.weight,
+
+    lapcount: p.laps || 0,
+    lastTime: p.lastLapMs ?? null,
+    best: p.bestLapMs ?? null,
+    time: p.totalMs ?? null,
+
+    gap,
+    diff,
+    mean,
+    consistency
+  };
+
+}); // 👈 ESTE CIERRE ES OBLIGATORIO
+ };
+
+
+  // 🟢 ===== MODO CARRERA (TU LÓGICA ORIGINAL) =====
+  const sorted = [...participantsCache].sort((a, b) => {
+    if ((b.laps || 0) !== (a.laps || 0)) {
+      return (b.laps || 0) - (a.laps || 0);
+    }
+    if (a.totalMs != null && b.totalMs != null) {
+      return a.totalMs - b.totalMs;
+    }
+    return 0;
+  });
+
+  const leader = sorted[0];
+  const leaderLaps = leader?.laps || 0;
+  const leaderTime = leader?.totalMs || 0;
+  
+return sorted.map((p, i) => {
+
+  // 🔢 NUMERO MOSTRADO
+  const racerNumber = getRacerNumber(p);
+
+  // ===== GAP =====
+  let gap = "-";
+  if (i > 0) {
+    if (p.laps === leaderLaps) {
+      gap = formatLapMs(p.totalMs - leaderTime);
+    } else {
+      gap = `+${leaderLaps - p.laps} LAP`;
+    }
+  }
+
+  // ===== DIFF =====
+  let diff = "-";
+  if (i > 0) {
+    const prev = sorted[i - 1];
+    if (p.laps === prev.laps) {
+      diff = formatLapMs(p.totalMs - prev.totalMs);
+    } else {
+      diff = `+${prev.laps - p.laps} LAP`;
+    }
+  }
+
+  // ===== MEDIA =====
+  const validLaps = Array.isArray(p.lapTimes)
+    ? p.lapTimes.filter(l => l && l.valid).map(l => l.ms)
+    : [];
+
+  const mean =
+    validLaps.length > 0
+      ? validLaps.reduce((a, b) => a + b, 0) / validLaps.length
+      : null;
+
+  // ===== CONSISTENCIA =====
+  let consistency = null;
+  if (validLaps.length > 1 && mean > 0) {
+    const variance =
+      validLaps.reduce(
+        (sum, v) => sum + Math.pow(v - mean, 2),
+        0
+      ) / validLaps.length;
+
+    consistency = (Math.sqrt(variance) / mean) * 100;
+  }
+
+return {
+  participant_id: p.id,
+  pos: i + 1,
+
+  racerName: p.driver_name || "-",
+  racerNumber: getRacerNumber(p),   // ✅ AÑADIR
+  nickname: p.nickname ?? "-",
+
+  racerTransponder: p.transponder ?? "-",
+  category: getRacerCategory(p),
+  weight: p.weight,
+
+  lapcount: p.laps || 0,
+  lastTime: p.lastLapMs ?? null,
+  best: p.bestLapMs ?? null,
+  time: p.totalMs ?? null,
+
+  gap,
+  diff,
+  mean,
+  consistency
+};
+
+
+});
+
+
+}
+
+
+function renderLapByLap() {
+  const head = document.getElementById("lap-by-lap-head");
+  const body = document.getElementById("lap-by-lap-body");
+  if (!head || !body) return;
+
+  if (!participantsCache.length) {
+    head.innerHTML = "";
+    body.innerHTML = "<tr><td>Sin datos</td></tr>";
+    return;
+  }
+
+  // Máximo número de vueltas (incluye inválidas)
+// Máximo número de vueltas (SOLO válidas)
+const maxLaps = Math.max(
+  ...participantsCache.map(
+    p => (p.lapTimes || []).filter(l => l.valid).length
+  )
+);
+
+
+  // ===== HEADER =====
+  head.innerHTML = `
+    <tr>
+      <th>V</th>
+      ${participantsCache.map(p => `
+        <th>
+          ${
+            p.driver_name && p.driver_name.trim() !== ""
+              ? p.driver_name
+              : (p.kart_number != null
+                  ? "Kart " + p.kart_number
+                  : p.transponder || p.id)
+          }
+        </th>
+      `).join("")}
+    </tr>
+  `;
+
+  // ===== BODY =====
+  body.innerHTML = "";
+
+  for (let lap = 0; lap < maxLaps; lap++) {
+    body.innerHTML += `
+      <tr>
+        <td>${lap + 1}</td>
+        ${participantsCache.map(p => {
+          const validLaps = (p.lapTimes || []).filter(l => l.valid);
+     const lapObj = validLaps[lap];
+    if (!lapObj) return `<td>-</td>`;
+
+
+          const t = lapObj.ms;
+          const isValid = lapObj.valid;
+
+          // 🟢 Mejor vuelta de la sesión (solo válidas)
+          const isBestSession =
+            isValid &&
+            latestLiveData?.bestLapTime != null &&
+            t === latestLiveData.bestLapTime;
+
+          // ⭐ Mejor vuelta PERSONAL (solo válida)
+          const isBestPersonal =
+            isValid &&
+            p.bestLapMs != null &&
+            t === p.bestLapMs;
+
+         return `
+  <td
+    class="
+      lap-cell
+      ${!isValid ? "time-invalid" : ""}
+      ${isBestSession ? "time-best-session" : ""}
+    "
+    data-pid="${p.id}"
+    data-lap="${lap}"
+    onclick="toggleLapValidity(this)"
+    title="Clic para invalidar / validar vuelta"
+  >
+   <span class="lap-time">
+  ${formatLapMs(t)}
+  ${isBestPersonal ? '<span class="star">★</span>' : ""}
+</span>
+
+  </td>
+`;
+
+        }).join("")}
+      </tr>
+    `;
+  }
+}
+function toggleLapValidity(cell) {
+  const pid = Number(cell.dataset.pid);
+  const lapIndex = Number(cell.dataset.lap);
+
+  const p = participantsCache.find(x => x.id === pid);
+  if (!p || !p.lapTimes?.[lapIndex]) return;
+
+  // 🔁 alternar validez
+  p.lapTimes[lapIndex].valid = !p.lapTimes[lapIndex].valid;
+
+  // 🔄 Recalcular stats del piloto
+  recalcParticipantStats(p);
+
+  // 🔄 Re-render
+  renderLiveFromLatest();
+  renderLapByLap();
+}
+function recalcParticipantStats(p) {
+  const validLaps = (p.lapTimes || []).filter(l => l.valid);
+
+  p.laps = validLaps.length;
+  p.totalMs = validLaps.reduce((s, l) => s + l.ms, 0) || null;
+  p.lastLapMs = validLaps.length ? validLaps[validLaps.length - 1].ms : null;
+  p.bestLapMs =
+    validLaps.length > 0
+      ? Math.min(...validLaps.map(l => l.ms))
+      : null;
+}
+
+
+
+
+  // ========= CONFIG =========
+  // ========= PERSISTENCIA (anti-refresh) =========
+  function saveLastSelectedSession(sessionId) {
+  localStorage.setItem("racecontrol_last_session", String(sessionId));
+}
+
+function getLastSelectedSession() {
+  const v = localStorage.getItem("racecontrol_last_session");
+  return v ? Number(v) : null;
+}
+
+function storageKeyForSession(sid) {
+  return `racecontrol_state_session_${sid}`;
+}
+
+function buildPersistableState() {
+  if (!currentSession) return null;
+
+  return {
+    sessionId: currentSession.id,
+    savedAt: Date.now(),
+
+    // Crono
+    raceStartTime: raceStartTime || null,
+
+    // Live
+    latestLiveData: latestLiveData || null,
+
+    // Vueltas locales (por si backend no trae laps_ms)
+    participants: participantsCache.map(p => ({
+      id: p.id,
+      lapTimes: Array.isArray(p.lapTimes) ? p.lapTimes : [],
+      laps: p.laps || 0,
+      lastLapMs: p.lastLapMs ?? null,
+      bestLapMs: p.bestLapMs ?? null,
+      totalMs: p.totalMs ?? null
+    }))
+  };
+}
+
+function persistState() {
+  if (!currentSession) return;
+  try {
+    const state = buildPersistableState();
+    if (!state) return;
+
+    // 🔧 NORMALIZACIÓN ANTES DE GUARDAR
+    for (const p of Object.values(state.participants ?? {})) {
+      if (Array.isArray(p.lapTimes)) {
+        p.lapTimes = normalizeLapTimes(p.lapTimes);
+      }
+    }
+
+    localStorage.setItem(
+      storageKeyForSession(currentSession.id),
+      JSON.stringify(state)
+    );
+  } catch (e) {
+    console.warn("⚠️ No se pudo persistir estado:", e);
+  }
+}
+
+
+function restoreStateIfNeeded() {
+  if (!currentSession) return false;
+
+  try {
+    const raw = localStorage.getItem(storageKeyForSession(currentSession.id));
+    if (!raw) return false;
+
+    const state = JSON.parse(raw);
+    if (!state || Number(state.sessionId) !== Number(currentSession.id)) return false;
+
+    // 1) Restaurar crono
+    if (state.raceStartTime) {
+      raceStartTime = state.raceStartTime;
+    }
+
+    // 2) Restaurar latestLiveData si no hay nada
+    if (!latestLiveData && state.latestLiveData) {
+      latestLiveData = state.latestLiveData;
+    }
+
+    // 3) Restaurar vueltas SOLO si el backend no ha rehidratado ya
+    const anyLocalHasLaps = participantsCache.some(
+      p => Array.isArray(p.lapTimes) && p.lapTimes.length > 0
+    );
+
+    if (!anyLocalHasLaps && Array.isArray(state.participants)) {
+      const byId = new Map(state.participants.map(x => [Number(x.id), x]));
+
+      participantsCache.forEach(p => {
+        const saved = byId.get(Number(p.id));
+        if (!saved) return;
+
+       const laps = Array.isArray(saved.lapTimes)
+  ? saved.lapTimes.filter(l => l && typeof l === "object" && typeof l.ms === "number")
+  : [];
+
+        if (!laps.length) return;
+
+       p.lapTimes = normalizeLapTimes(laps);
+recalcParticipantStats(p);
+
+      });
+
+      // reconstruir latestLiveData para pintar
+      latestLiveData = {
+        bestLapTime: getGlobalBestLap(),
+        classification: buildClassification()
+      };
+    }
+
+    // ✅ ESTA ES LA CLAVE (MARCAR RESTAURADO)
+    localStateRestored = true;
+
+    return true;
+  } catch (e) {
+    console.warn("⚠️ No se pudo restaurar estado:", e);
+    return false;
+  }
+}
+
+// Guardar al salir/refrescar
+window.addEventListener("beforeunload", () => {
+  persistState();
+});
+
+  const API = "/api";
+
+
+  let sessions = [];
+  let currentSession = null;
+  let participantsCache = [];
+  let latestLiveData = null;
+
+  let raceTimerInterval = null;
+  let raceStartTime = null;
+  let racePaused = false;
+  let countdownTimer = null;
+  let countdownRemaining = 0;
+
+ 
+  let prevLapCounts = {};
+  let minLapMs = 0;
+  let voiceEnabled = false;
+  let voiceMode = "kart";
+  let voiceRate = 1;
+  let voiceVolume = 1;
+
+  let editLapTarget = null;
+
+  // ===== Datos base =====
+  let drivers = [];
+  let karts = [];
+
+  // estado temporal inscripción
+  let pendingEntry = { driverId: null, kartId: null };
+
+  let editingGridEntry = null;
+  let isRaceStarting = false;
+  let localStateRestored = false;
+  let liveLoadInProgress = false;
+  let lastLiveLoadAt = 0;
+  let forceFreshStart = false;
+
+
+
+  // ========= UTILIDADES =========
+  function formatMs(ms) {
+  if (ms == null || isNaN(ms)) return "-";
+
+  let total = Math.max(0, ms);
+
+  let h = Math.floor(total / 3600000);
+  total %= 3600000;
+
+  let m = Math.floor(total / 60000);
+  total %= 60000;
+
+  let s = Math.floor(total / 1000);
+  let ms2 = total % 1000;
+
+  // 👇 SOLO mostrar horas si existen
+  if (h > 0) {
+    return h + ":" +
+      String(m).padStart(2,"0") + ":" +
+      String(s).padStart(2,"0") + "." +
+      String(ms2).padStart(3,"0");
+  }
+
+  // 👇 SOLO mostrar minutos si existen
+  if (m > 0) {
+    return m + ":" +
+      String(s).padStart(2,"0") + "." +
+      String(ms2).padStart(3,"0");
+  }
+
+  // 👇 si son solo segundos → sin ceros delante
+  return s + "." + String(ms2).padStart(3,"0");
+}
+
+  function formatLapMs(ms) {
+    if (ms == null || isNaN(ms)) return "-";
+    let total = Math.max(0, ms);
+    let m = Math.floor(total / 60000);
+    total %= 60000;
+    let s = Math.floor(total / 1000);
+    let ms2 = total % 1000;
+    if (m > 0) return m + ":" + String(s).padStart(2,"0") + "." + String(ms2).padStart(3,"0");
+    return s + "." + String(ms2).padStart(3,"0");
+  }
+
+  function safeText(v) {
+    if (v === null || v === undefined || v === "") return "-";
+    return v;
+  }
+
+  function show(el){ if (el) el.style.display = "block"; }
+  function hide(el){ if (el) el.style.display = "none"; }
+
+  function autoCategory(weight) {
+    if (!weight) return null;
+    if (weight < 75) return "65";
+    if (weight < 95) return "75";
+    return "95";
+  }
+function showRCTOAST(title, msg){
+  const wrap = document.getElementById("rc-toast");
+  const t = document.getElementById("rc-toast-title");
+  const m = document.getElementById("rc-toast-msg");
+  if(!wrap || !t || !m) return;
+  t.textContent = title || "Aviso";
+  m.innerHTML = msg || "";
+  wrap.style.display = "block";
+
+  // opcional: beep corto
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = 880;
+    g.gain.value = 0.03;
+    o.connect(g); g.connect(ctx.destination);
+    o.start();
+    setTimeout(()=>{ o.stop(); ctx.close(); }, 150);
+  } catch {}
+}
+
+function hideRCTOAST(){
+  const wrap = document.getElementById("rc-toast");
+  if(wrap) wrap.style.display = "none";
+}
+window.hideRCTOAST = hideRCTOAST;
+  // ========= CARGA BASE =========
+async function loadDriversAndKarts() {
+  try {
+    const [drRes, ktRes] = await Promise.all([
+      fetch(API + "/drivers"),   // ← PLURAL CORRECTO
+      fetch(API + "/karts")
+    ]);
+
+
+    // ✅ PROTECCIÓN CLAVE: evita "Unexpected token '<'"
+    if (!drRes.ok || !ktRes.ok) {
+      console.warn(
+        "⚠️ Fallo cargando drivers/karts:",
+        { drivers: drRes.status, karts: ktRes.status }
+      );
+      return;
+    }
+
+    const drJson = await drRes.json();
+    const ktJson = await ktRes.json();
+
+    drivers = Array.isArray(drJson)
+      ? drJson
+      : (drJson.drivers || drJson.data || []);
+
+    karts = Array.isArray(ktJson)
+      ? ktJson
+      : (ktJson.karts || ktJson.data || []);
+
+    // pill karts
+    const pillKarts = document.getElementById("pill-karts");
+    if (pillKarts) pillKarts.textContent = String(karts.length);
+
+    console.log("✔ Drivers:", drivers.length, "✔ Karts:", karts.length);
+  } catch (err) {
+    console.error("❌ Error cargando drivers/karts", err);
+  }
+}
+
+
+  // ========= BUSCADOR PILOTOS =========
+  function searchDrivers(q) {
+    q = q.toLowerCase();
+    return drivers.filter(d => {
+      const name = (d.name || "").toLowerCase();
+      const lastname = (d.lastname || "").toLowerCase();
+      const number = d.number != null ? String(d.number) : "";
+      const nick = (d.nickname || "").toLowerCase();
+      const transponder = (d.transponder || "").toLowerCase();
+      return name.includes(q) || lastname.includes(q) || number.includes(q) || nick.includes(q) || transponder.includes(q);
+    });
+  }
+
+  function renderDriverResults(list) {
+    const box = document.getElementById("driver-suggest");
+    if (!box) return;
+    if (!list.length) {
+      box.innerHTML = '<div class="item muted">Sin resultados</div>';
+      show(box);
+      return;
+    }
+    box.innerHTML = list.slice(0, 10).map(d => `
+      <div class="item" data-id="${d.id}">
+        👤 ${d.name || ""}${d.lastname ? " " + d.lastname : ""}${d.number != null ? " · #" + d.number : ""}
+      </div>`).join("");
+    show(box);
+  }
+
+  function pickDriver(id) {
+    const d = drivers.find(x => Number(x.id) === Number(id));
+    if (!d) return;
+    pendingEntry.driverId = d.id;
+    document.getElementById("driver-picked").textContent = `${d.name || ""}${d.lastname ? " " + d.lastname : ""}`.trim() || "-- Piloto --";
+    document.getElementById("search-driver").value = "";
+    hide(document.getElementById("driver-suggest"));
+  }
+
+  document.getElementById("search-driver")?.addEventListener("input", e => {
+    const q = e.target.value.trim();
+    if (!q) return hide(document.getElementById("driver-suggest"));
+    renderDriverResults(searchDrivers(q));
+  });
+
+  document.getElementById("driver-suggest")?.addEventListener("click", e => {
+    const item = e.target.closest(".item");
+    if (!item) return;
+    pickDriver(Number(item.dataset.id));
+  });
+
+  // ========= BUSCADOR KARTS =========
+  function searchKarts(q) {
+  q = q.toLowerCase();
+
+  // 🔒 ocultar karts anulados
+  const visible = karts.filter(k => !k.is_disabled);
+
+  return visible.filter(k => {
+    const num = String(k.number ?? "");
+    const tr = (k.transponder || "").toLowerCase();
+    const brand = (k.brand || "").toLowerCase();
+    const model = (k.model || "").toLowerCase();
+    return num.includes(q) || tr.includes(q) || brand.includes(q) || model.includes(q);
+  });
+}
+  function renderKartResults(list) {
+    const box = document.getElementById("kart-suggest");
+    if (!box) return;
+    if (!list.length) {
+      box.innerHTML = '<div class="item muted">Sin resultados</div>';
+      show(box);
+      return;
+    }
+    box.innerHTML = list.slice(0, 10).map(k => `
+      <div class="item" data-id="${k.id}">
+        🚗 Kart #${k.number}${k.transponder ? ` · ${k.transponder}` : ""}
+      </div>`).join("");
+    show(box);
+  }
+
+  function pickKart(id) {
+    const k = karts.find(x => Number(x.id) === Number(id));
+    if (!k) return;
+    pendingEntry.kartId = k.id;
+    document.getElementById("kart-picked").textContent = `Kart #${k.number}`;
+    document.getElementById("search-kart").value = "";
+    hide(document.getElementById("kart-suggest"));
+  }
+
+  document.getElementById("search-kart")?.addEventListener("input", e => {
+    const q = e.target.value.trim();
+    if (!q) return hide(document.getElementById("kart-suggest"));
+    renderKartResults(searchKarts(q));
+  });
+
+  document.getElementById("kart-suggest")?.addEventListener("click", e => {
+    const item = e.target.closest(".item");
+    if (!item) return;
+    pickKart(Number(item.dataset.id));
+  });
+
+  // ========= INSCRIBIR EN SESIÓN (con grid) =========
+ async function addEntryToGrid() {
+  if (!currentSession) return alert("Selecciona una sesión");
+  if (!pendingEntry.driverId && !pendingEntry.kartId)
+    return alert("Selecciona piloto o kart");
+
+  const payload = {};
+  if (pendingEntry.driverId) payload.driver_id = pendingEntry.driverId;
+  if (pendingEntry.kartId) payload.kart_id = pendingEntry.kartId;
+
+  const gridPos = Number(document.getElementById("grid-position")?.value || 0);
+  if (gridPos > 0) payload.grid_position = gridPos;
+
+  try {
+    const res = await fetch(
+      `${API}/sessions/${currentSession.id}/participants`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    if (!res.ok) return alert(await res.text());
+
+    // limpiar UI
+    pendingEntry = { driverId: null, kartId: null };
+    document.getElementById("driver-picked").textContent = "-- Sin piloto --";
+    document.getElementById("kart-picked").textContent = "-- Sin kart --";
+    document.getElementById("grid-position").value = "";
+
+    // 🔁 actualizar estado y REPINTAR
+    await loadParticipants();
+    syncLiveDataWithParticipants();
+    renderLiveFromLatest();
+
+  } catch (err) {
+    console.error("❌ Error inscribiendo", err);
+    alert("Error inscribiendo participante");
+  }
+}
+
+function syncLiveDataWithParticipants() {
+  if (!latestLiveData) {
+    latestLiveData = { bestLapTime: null, classification: [] };
+  }
+
+  const byPid = new Map(
+    (latestLiveData.classification || []).map(r => [r.participant_id, r])
+  );
+
+  latestLiveData.classification = participantsCache.map((p, i) => {
+  const old = byPid.get(p.id);
+
+ return {
+  participant_id: p.id,
+  pos: i + 1,
+
+  
+ 
+  racerNumber: getRacerNumber(p),
+  racerTransponder: p.transponder ?? "-",
+
+  // ✅ DATOS BASE DE IDENTIDAD (OBLIGATORIOS)
+  driver_number: p.driver_number ?? old?.driver_number ?? null,
+  kart_number: p.kart_number ?? old?.kart_number ?? null,   // 👈 ESTA ERA LA QUE FALTABA
+
+ category: getRacerCategory(p),
+  weight: p.weight,
+
+  lapcount: p.laps || 0,
+  lastTime: p.lastLapMs ?? null,
+  best: p.bestLapMs ?? null,
+  time: p.totalMs ?? null,
+
+  laps_ms: old?.laps_ms ?? p.lapTimes ?? [],
+
+  gap: "-",
+  diff: "-"
+};
+
+});
+
+}
+
+
+
+  // ========= SESIONES =========
+  async function loadSessions() {
+    try {
+      const res = await fetch(API + "/sessions");
+      sessions = await res.json();
+
+      const sel = document.getElementById("session-select");
+      sel.innerHTML = "";
+
+      if (!sessions.length) {
+        sel.innerHTML = '<option value="">Sin sesiones</option>';
+        updateSessionHeader(null);
+        updateTimingTableExtended([], { bestLapTime:null });
+        return;
+      }
+
+      sessions.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = s.name ? `${s.name} (${s.status})` : `Sesión ${s.id}`;
+        sel.appendChild(opt);
+      });
+
+      sel.onchange = () => selectSession(Number(sel.value));
+
+      // 👉 RESPETAR ÚLTIMA SESIÓN ELEGIDA
+const lastId = getLastSelectedSession();
+const exists = lastId && sessions.some(s => Number(s.id) === Number(lastId));
+
+if (exists) {
+  await selectSession(lastId);
+} else {
+  const running = sessions.find(s => s.status === "running");
+  await selectSession(running ? running.id : sessions[0].id);
+}
+
+    } catch (err) {
+      console.error("Error cargando sesiones", err);
+    }
+  }
+
+async function selectSession(id) {
+saveLastSelectedSession(id);
+
+  try {
+    const res = await fetch(`${API}/sessions/${id}`);
+    if (!res.ok) return;
+
+    currentSession = await res.json();
+
+    updateSessionHeader(currentSession);
+    document.getElementById("pill-session-id").textContent = currentSession.id;
+
+    // 1️⃣ cargar entries existentes
+    await loadParticipants();
+
+    // 2️⃣ SI NO HAY ENTRIES → IMPORTAR DESDE SESSION_PARTICIPANTS
+    if (participantsCache.length === 0) {
+      console.log("📥 Race Control: importando parrilla desde sesión");
+
+     
+
+      // volver a cargar entries tras importar
+      await loadParticipants();
+    }
+
+    // 3️⃣ cargar datos live (backend)
+    // ❌ NO cargar live aquí
+// await loadLiveExtended();
+
+
+    if (currentSession.status === "running") startRaceTimer();
+    else stopRaceTimer();
+
+    // ✅ ESTA ES LA PIEZA QUE FALTABA
+    const restored = restoreStateIfNeeded();
+    if (restored) {
+      console.log("♻️ Estado restaurado desde localStorage");
+      renderLiveFromLatest();
+      renderLapByLap();
+    }
+
+  } catch (err) {
+    console.error("❌ Error cargando sesión:", err);
+  }
+}
+
+
+
+  function updateSessionHeader(session) {
+    const nameEl = document.getElementById("session-name");
+    const stBadge = document.getElementById("badge-status");
+    const flagBadge = document.getElementById("badge-flag");
+
+    if (!session) {
+      nameEl.textContent = "Sin sesión seleccionada";
+      stBadge.textContent = "Estado: -";
+      flagBadge.textContent = "Bandera: -";
+      flagBadge.className = "badge";
+      return;
+    }
+
+    nameEl.textContent = session.name || `Sesión ${session.id}`;
+    stBadge.textContent = "Estado: " + (session.status || "-");
+
+    const flag = session.flag || "NONE";
+    flagBadge.textContent = "Bandera: " + String(flag).toUpperCase();
+    flagBadge.className = "badge";
+    if (flag === "green") flagBadge.classList.add("flag-green");
+    if (flag === "yellow") flagBadge.classList.add("flag-yellow");
+    if (flag === "red") flagBadge.classList.add("flag-red");
+    if (flag === "checkered") flagBadge.classList.add("flag-checkered");
+  }
+
+  // ========= PARTICIPANTES =========
+async function loadParticipants() {
+  if (!currentSession) return;
+
+  const res = await fetch(
+    `${API}/sessions/${currentSession.id}/participants`
+  );
+  if (!res.ok) return;
+
+  const list = await res.json();
+  console.log("📦 PARTICIPANTS RAW:", list);
+
+  const fresh = Array.isArray(list) ? list : [];
+
+  // 🔒 MERGE SOLO IDENTIDAD (NUNCA TOCAR ESTADO LIVE AQUÍ)
+  participantsCache = fresh.map(p => {
+    const old = participantsCache.find(x => x.id === p.id) ?? {};
+
+
+    // 🧍 PILOTO (drivers cache)
+    const d = drivers.find(x => Number(x.id) === Number(p.driver_id));
+
+ const driverNumber =
+  d?.driver_number ?? null;
+
+
+
+
+    const driverWeight =
+      p.driver_weight ??
+      old?.weight ??
+      null;
+
+    const driverCategory =
+      p.driver_category ??
+      old?.category ??
+      null;
+
+    // 🏎️ KART
+    const k = karts.find(x => Number(x.id) === Number(p.kart_id));
+    const kartNumber = k?.number ?? old?.kart_number ?? null;
+
+    return {
+      // IDs
+      id: p.id,
+      driver_id: p.driver_id,
+      kart_id: p.kart_id,
+
+      // 👤 IDENTIDAD (CLAVE)
+      driver_name:
+        p.driver_name ??
+        old?.driver_name ??
+        d?.name ??
+        "-",
+
+      nickname:
+        p.driver_nickname ??
+        old?.nickname ??
+        d?.nickname ??
+        null,
+
+      // 🔢 NÚMEROS
+      driver_number: driverNumber,
+kart_number: kartNumber ?? old?.kart_number ?? null,
+
+      // ⚖️ PESO / CATEGORÍA
+      weight: driverWeight,
+      category: driverCategory,
+
+      // 📡 TRANSPONDER
+      transponder:
+        p.transponder ??
+        old?.transponder ??
+        null,
+
+      // ⏱️ ESTADO LIVE (SE CONSERVA)
+      laps: old?.laps ?? 0,
+      lapTimes: Array.isArray(old?.lapTimes) ? old.lapTimes : [],
+      lastLapMs: old?.lastLapMs ?? null,
+      bestLapMs: old?.bestLapMs ?? null,
+      totalMs: old?.totalMs ?? null
+    };
+  });
+
+  console.log(
+    "🧪 participantsCache:",
+    participantsCache.map(p => ({
+      name: p.driver_name,
+      nickname: p.nickname,
+      weight: p.weight,
+      category: p.category
+    }))
+  );
+
+  // ===== UI =====
+  const badge = document.getElementById("badge-participants");
+  if (badge) {
+    badge.textContent = "Participantes: " + participantsCache.length;
+  }
+
+  // Panel parrilla
+  renderParticipantsPanel();
+
+  // ⚠️ NO renderizar live aquí si aún no se rehidrató
+  if (!isRaceStarting) {
+    renderLiveFromLatest();
+
+}
+
+
+  // ===============================
+  // ✅ SOLO inicializar si NO existe
+  // ===============================
+  if (!latestLiveData) {
+    latestLiveData = {
+      bestLapTime: null,
+      classification: participantsCache.map((p, i) => ({
+        participant_id: p.id,
+        lapcount: 0,
+        lastTime: null,
+        best: null,
+        time: null,
+        pos: i + 1
+      }))
+    };
+  }
+
+  renderLiveFromLatest();
+}
+
+
+
+
+  function renderParticipantsPanel() {
+    const body = document.getElementById("participants-body");
+    if (!body) return;
+
+    if (!participantsCache.length) {
+      body.innerHTML = '<tr><td colspan="6" class="muted">Sin participantes</td></tr>';
+      return;
+    }
+
+    const sorted = [...participantsCache].sort((a,b) => {
+      const ga = Number(a.grid_position || 9999);
+      const gb = Number(b.grid_position || 9999);
+      if (ga !== gb) return ga - gb;
+      return Number(a.id) - Number(b.id);
+    });
+
+    body.innerHTML = sorted.map(p => `
+      <tr>
+        <td>${p.grid_position ?? "-"}</td>
+        <td>${p.driver_name || "— SIN PILOTO —"}</td>
+        <td>${p.driver_transponder || "-"}</td>
+        <td>${p.kart_number != null ? "#" + p.kart_number : "— SIN KART —"}</td>
+        <td>${p.transponder || "-"}</td>
+        <td>
+  <button class="btn" onclick="openGridEditor(${p.id})" title="Editar">⚙️</button>
+  <button class="btn" onclick="deleteEntry(${p.id})" title="Eliminar">🗑</button>
+
+  ${
+    (p.kart_id != null)
+      ? `<button class="btn" onclick="markKartBroken(${p.kart_id}, '${p.kart_number ?? ""}', ${p.id})" title="Avería (anular kart)">🚫</button>`
+      : ``
+  }
+
+  ${
+    (p.kart_id != null)
+      ? `<button class="btn" onclick="markKartRepaired(${p.kart_id}, '${p.kart_number ?? ""}')" title="OK (reactivar kart)">✅</button>`
+      : ``
+  }
+</td>
+      </tr>
+    `).join("");
+  }
+
+async function deleteEntry(id) {
+  if (!currentSession) return;
+  if (!confirm("¿Eliminar participante?")) return;
+
+  const res = await fetch(
+`${API}/sessions/${currentSession.id}/participants/${id}`,
+    { method: "DELETE" }
+  );
+
+  if (!res.ok) return alert(await res.text());
+  await loadParticipants();
+  await loadLiveExtended();
+}
+
+function openGridEditor(entryId) {
+  const p = participantsCache.find(x => x.id === entryId);
+  if (!p) return;
+
+  // 🔒 Normalizamos el objeto
+  editingGridEntry = {
+    id: p.id,
+    driver_id: p.driver_id ?? null,
+    kart_id: p.kart_id ?? null,
+    grid_position: p.grid_position ?? null,
+    transponder: p.transponder ?? null
+  };
+
+  // Campos visibles
+  document.getElementById("edit-name").value = p.driver_name || "";
+  document.getElementById("edit-grid").value = p.grid_position || "";
+  document.getElementById("edit-transponder").value = p.transponder || "";
+
+  // Select de kart
+  const sel = document.getElementById("edit-kart");
+  if (!sel) {
+    console.error("❌ No existe #edit-kart");
+    return;
+  }
+
+  // karts ocupados en la sesión (menos el actual)
+  const usedKartIds = new Set(
+    participantsCache
+      .filter(e => e.kart_id != null && e.id !== p.id)
+      .map(e => Number(e.kart_id))
+  );
+
+  const currentKartId = p.kart_id != null ? Number(p.kart_id) : null;
+
+  const options = karts
+    .filter(k => {
+      const kid = Number(k.id);
+
+      // 1) si está ocupado por otro piloto -> fuera
+      if (usedKartIds.has(kid)) return false;
+
+      // 2) si está fuera de servicio -> fuera (salvo que sea el kart actual)
+      if (k.is_disabled) return false;
+
+      return true;
+    })
+    .map(k => {
+      const kid = Number(k.id);
+      const isCurrent = currentKartId != null && kid === currentKartId;
+
+      // Si está fuera de servicio, lo mostramos SOLO si es el actual, y deshabilitado
+      const disabledAttr = k.is_disabled ? "disabled" : "";
+      const label = `Kart #${k.number}${k.is_disabled ? " (FUERA DE SERVICIO)" : ""}`;
+
+      return `
+        <option value="${kid}" ${isCurrent ? "selected" : ""} ${disabledAttr}>
+          ${label}
+        </option>
+      `;
+    })
+    .join("");
+
+  sel.innerHTML = `<option value="">— SIN KART —</option>` + options;
+
+  document.getElementById("grid-editor").style.display = "block";
+}
+
+
+function closeGridEditor() {
+  editingGridEntry = null;
+  document.getElementById("grid-editor").style.display = "none";
+}
+
+async function saveGridEdit() {
+  if (!editingGridEntry || !currentSession) return;
+
+  try {
+    const payload = {};
+
+    // ===== KART =====
+    const kartValue = document.getElementById("edit-kart")?.value || "";
+    const newKartId = kartValue !== "" ? Number(kartValue) : null;
+
+    if (newKartId !== editingGridEntry.kart_id) {
+      payload.kart_id = newKartId;
+    }
+
+    // ===== TRANSPONDER =====
+    const transponderValue =
+      document.getElementById("edit-transponder")?.value?.trim() || null;
+
+    if (transponderValue !== editingGridEntry.transponder) {
+      payload.transponder = transponderValue;
+    }
+
+    // ===== NADA QUE GUARDAR =====
+    if (Object.keys(payload).length === 0) {
+      closeGridEditor();
+      return;
+    }
+
+    const res = await fetch(
+       `${API}/sessions/${currentSession.id}/participants/${editingGridEntry.id}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    if (!res.ok) {
+      alert(await res.text());
+      return;
+    }
+
+    // 🔁 ACTUALIZAR IDENTIDAD LOCAL (SIN TOCAR VUELTAS)
+    const p = participantsCache.find(x => x.id === editingGridEntry.id);
+    if (p) {
+      if ("kart_id" in payload) {
+        p.kart_id = payload.kart_id;
+        const k = karts.find(k => Number(k.id) === Number(payload.kart_id));
+        if (k) p.kart_number = k.number;
+      }
+
+      if ("transponder" in payload) {
+        p.transponder = payload.transponder;
+      }
+    }
+
+    closeGridEditor();
+
+    // 🔒 Persistir
+    persistState();
+
+    // 🔁 REPINTAR (SIN BACKEND)
+    renderParticipantsPanel();
+    renderLiveFromLatest();
+    renderLapByLap();
+
+  } catch (err) {
+    console.error("❌ Error guardando edición de parrilla:", err);
+    alert("Error guardando cambios");
+  }
+}
+
+
+
+
+
+  // ========= LIVE EXTENDED 
+function renderLiveFromLatest() {
+
+  // 🔒 SI NO ESTÁ RUNNING
+  if (currentSession?.status !== "running") {
+
+   
+
+    // ✅ 2. FALLBACK: usar datos locales (NO BORRAR VUELTAS)
+    if (participantsCache.length) {
+  const classification = (buildClassification() || []).filter(Boolean);
+
+
+latestLiveData = {
+  bestLapTime: getGlobalBestLap(),
+  classification
+};
+
+updateTimingTableExtended(
+  classification,
+  latestLiveData
+
+   );
+    }
+
+    return;
+  }
+
+   // 🟢 MODO LIVE (RUNNING)
+  if (!participantsCache.length) return;
+
+  const classification = (buildClassification() || []).filter(Boolean);
+
+
+  latestLiveData = {
+    bestLapTime: getGlobalBestLap(),
+    classification
+  };
+
+  updateTimingTableExtended(classification, latestLiveData);
+}
+
+
+
+
+
+async function loadLiveExtended() {
+  if (!currentSession) return;
+
+  const now = Date.now();
+
+  // 🛑 Evitar llamadas concurrentes
+  if (liveLoadInProgress) return;
+
+  // 🛑 Evitar spam (mínimo 500 ms)
+  if (now - lastLiveLoadAt < 500) return;
+
+  liveLoadInProgress = true;
+  lastLiveLoadAt = now;
+
+  try {
+    const res = await fetch(`/api/sessions/${currentSession.id}/live-extended`);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    latestLiveData = data;
+
+    // 🔁 REHIDRATAR con protección
+    if (Array.isArray(data?.classification)) {
+      data.classification.forEach(row => {
+        const p = participantsCache.find(x => x.id === row.participant_id);
+        if (!p) return;
+
+        // ⛔ NO pisar estado local restaurado
+        if (localStateRestored && (!row.laps_ms || !row.laps_ms.length)) {
+          return;
+        }
+
+        if (Array.isArray(row.laps_ms) && row.laps_ms.length) {
+          p.lapTimes = [...row.laps_ms];
+          p.laps = row.laps_ms.length;
+          p.totalMs = row.laps_ms.reduce((a,b)=>a+b,0);
+          p.bestLapMs = Math.min(...row.laps_ms);
+          p.lastLapMs = row.laps_ms.at(-1) ?? null;
+        }
+      });
+    }
+
+    persistState();
+    renderLiveFromLatest();
+
+  } catch (e) {
+    console.warn("⚠️ Error loadLiveExtended:", e);
+  } finally {
+    liveLoadInProgress = false;
+  }
+}
+
+
+function updateTimingTableExtended(rows, meta) {
+  const body = document.getElementById("timing-body");
+  const leaderBadge = document.getElementById("badge-leader");
+  const pillLeaderLaps = document.getElementById("pill-leader-laps");
+  const pillBestLap = document.getElementById("pill-best-lap");
+
+  // Helpers robustos
+  const isNum = v => typeof v === "number" && Number.isFinite(v);
+
+  // Consistencia:
+  // - si te llega como porcentaje (0-100) => "12.3%"
+  // - si te llega como ms (ej. desviación estándar en ms) => "0:00.123" (puedes cambiarlo)
+  const formatConsistency = v => {
+    if (!isNum(v)) return "-";
+    // Si quieres porcentaje: asume que v ya es porcentaje 0..100
+    return v.toFixed(1) + "%";
+  };
+
+  // Media: si es número, la tratamos como ms
+  const formatMean = v => {
+  if (!isNum(v)) return "-";
+  return formatLapMs(Math.round(v));
+};
+
+
+  if (!rows || !rows.length) {
+    body.innerHTML = '<tr><td colspan="14">Sin datos</td></tr>';
+    leaderBadge.textContent = "Líder: V 0";
+    pillLeaderLaps.textContent = "0";
+    pillBestLap.textContent = "-";
+    return;
+  }
+
+  const bestSession = meta && meta.bestLapTime != null ? meta.bestLapTime : null;
+  const newPrevLapCounts = {};
+
+  const leaderByLaps = rows.reduce(
+    (acc, r) => (!acc || (r.lapcount || 0) > (acc.lapcount || 0)) ? r : acc,
+    null
+  );
+
+  if (leaderByLaps) {
+    leaderBadge.textContent = "Líder: V " + (leaderByLaps.lapcount || 0);
+    pillLeaderLaps.textContent = leaderByLaps.lapcount || 0;
+  } else {
+    leaderBadge.textContent = "Líder: V 0";
+    pillLeaderLaps.textContent = "0";
+  }
+
+  pillBestLap.textContent = bestSession != null ? formatLapMs(bestSession) : "-";
+
+  body.innerHTML = rows.map(r => {
+    const participantId = r.participant_id;
+    const prevLap = prevLapCounts[participantId] || 0;
+    const hasNewLap = (r.lapcount || 0) > prevLap;
+
+    newPrevLapCounts[participantId] = r.lapcount || 0;
+
+    const finishDotClass = hasNewLap ? "finish-dot active" : "finish-dot";
+    const cat = r.category || "-";
+const p = participantsCache.find(
+  x => Number(x.id) === Number(participantId)
+);
+
+const nick = p?.driver_nickname ?? p?.nickname ?? "-";
+
+const weight = p?.driver_weight ?? p?.weight ?? null;
+const weightTxt =
+  weight != null && String(weight).trim() !== ""
+    ? Number(weight).toFixed(0) + ""
+    : "-";
+
+    return `
+<tr class="${r.pos === 1 ? "leader" : ""}"
+    ondblclick="openLapsPanel(${participantId})">
+
+  <!-- Punto -->
+  <td class="finish-cell">
+    <span class="${finishDotClass}"></span>
+  </td>
+
+  <!-- Pos -->
+  <td>${r.pos || "-"}</td>
+
+  <!-- Numero -->
+  <td>${safeText(r.racerNumber)}</td>
+
+  <!-- Piloto -->
+  <td>${safeText(r.racerName)}</td>
+
+  <!-- Nick -->
+  <td>${safeText(nick)}</td>
+
+  <!-- Peso -->
+  <td>${weightTxt}</td>
+
+  <!-- Categoria -->
+  <td>${cat}</td>
+
+  <!-- Vueltas -->
+  <td>${r.lapcount ?? 0}</td>
+
+  <!-- Última -->
+  <td class="time-cell">
+    ${r.lastTime != null ? formatLapMs(r.lastTime) : "-"}
+  </td>
+
+  <!-- Mejor -->
+  <td class="${
+    meta?.bestLapTime != null && r.best === meta.bestLapTime
+      ? "time-best-session"
+      : ""
+  }">
+    ${r.best != null ? formatLapMs(r.best) : "-"}
+  </td>
+
+  <!-- Total -->
+  <td class="time-cell">
+    ${r.time != null ? formatMs(r.time) : "-"}
+  </td>
+
+  <!-- GAP -->
+  <td>${safeText(r.gap)}</td>
+
+  <!-- DIFF -->
+  <td>${safeText(r.diff)}</td>
+
+  <!-- Media -->
+  <td>${formatMean(r.mean)}</td>
+
+  <!-- Consistencia -->
+  <td>${formatConsistency(r.consistency)}</td>
+
+  <!-- Transponder -->
+  <td>${safeText(r.racerTransponder)}</td>
+
+</tr>
+`;
+
+  }).join("");
+
+  prevLapCounts = newPrevLapCounts;
+}
+
+
+
+  function applyCategoryFilter() {
+    renderLiveFromLatest();
+  }
+
+
+  // ========= VOZ =========
+  function maybeAnnounceLap(r) {
+    if (!voiceEnabled) return;
+    if (!("speechSynthesis" in window)) return;
+
+    const number = safeText(
+  r.racerNumber ??
+  getRacerNumber({
+    driver_number: r.driver_number,
+    kart_number: r.kart_number
+  })
+);
+
+    const name = safeText(r.racerName);
+    const lap = r.lapcount || 0;
+
+    let text = "";
+    if (voiceMode === "kart") text = `Kart ${number}, vuelta ${lap}`;
+    else if (voiceMode === "driver") text = `Piloto ${name}, vuelta ${lap}`;
+    else text = `Kart ${number}, piloto ${name}, vuelta ${lap}`;
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "es-ES";
+    utter.rate = voiceRate;
+    utter.volume = voiceVolume;
+    window.speechSynthesis.speak(utter);
+  }
+
+  // ========= CONTROL DE CARRERA =========
+async function startRace() {
+  if (!currentSession) return;
+  if (!confirm("¿Iniciar la sesión? El cronómetro se pondrá a cero.")) return;
+
+  isRaceStarting = true;
+  forceFreshStart = true;
+
+  // 🔥 RESET CRONO FRONTEND
+  raceStartTime = Date.now();
+  stopRaceTimer();
+  updateRaceTimer();
+
+  // 🔒 RESET DE ESTADO LIVE
+  participantsCache.forEach(p => {
+    p.laps = 0;
+    p.lastLapMs = null;
+    p.bestLapMs = null;
+    p.totalMs = 0;
+    p.lapTimes = [];
+
+    lastLapAtByPid[p.id] = null;
+    lastRawTimeByPid[p.id] = null;
+	lastKeyPressAtByPid[p.id] = null;
+
+  });
+
+  renderLapByLap();
+
+  latestLiveData = {
+    bestLapTime: null,
+    classification: participantsCache.map((p, i) => ({
+      participant_id: p.id,
+      lapcount: 0,
+      lastTime: null,
+      best: null,
+      time: null,
+      pos: i + 1
+    }))
+  };
+
+await fetch(`${API}/sessions/${currentSession.id}/start`, {
+  method: "POST"
+});
+
+// 🔹 VUELVE A CARGAR LA SESIÓN REAL DEL SERVIDOR
+const res = await fetch(`${API}/sessions/${currentSession.id}`);
+currentSession = await res.json();
+
+// 🔹 Usa TU función existente para pintar la cabecera
+updateSessionHeader(currentSession);   // <-- ESTA SÍ EXISTE EN TU CÓDIGO
+
+// 🔹 Ahora arranca el cronómetro
+startRaceTimer();
+
+persistState();
+
+forceFreshStart = false;
+isRaceStarting = false;
+
+
+
+}
+
+
+async function finishRace() {
+  if (!currentSession) return;
+
+  if (!confirm("¿Finalizar la sesión?")) return;
+
+  await fetch(`${API}/sessions/${currentSession.id}/finish`, {
+    method: "POST"
+  }).catch(() => {});
+
+  // refrescar sesión SIN perder datos locales
+  await selectSession(currentSession.id);
+  persistState();
+
+  // 📧 MANUAL: enviar correo si hay email escrito
+  const email = (AUTO?.clientEmail || "").trim();
+  if (email.includes("@")) {
+    try {
+      await sendFullReportPdfToEmail(email);
+      alert("✅ Informe enviado por email");
+    } catch (err) {
+      console.error("❌ Error enviando email:", err);
+      alert("❌ No se pudo enviar el email (mira consola/servidor)");
+    }
+  } else {
+    console.log("ℹ️ No se envía email: AUTO.clientEmail vacío o inválido");
+  }
+}
+function startRaceTimer(resume = false) {
+  stopRaceTimer();
+
+  if (!currentSession) return;
+
+  // 🟢 Si es resume tras pausa → mantener elapsed
+  if (resume && racePausedElapsed > 0) {
+    raceStartTime = Date.now() - racePausedElapsed;
+  }
+
+  // 🔥 start normal nuevo
+  else if (forceFreshStart || isRaceStarting) {
+    raceStartTime = Date.now();
+    racePausedElapsed = 0;
+  }
+
+  // 🔁 rehidratar backend
+  else {
+    const baseMs = (currentSession.elapsed_seconds || 0) * 1000;
+
+    const startedAt = currentSession.started_at
+      ? new Date(currentSession.started_at).getTime()
+      : Date.now();
+
+    raceStartTime = startedAt - baseMs;
+  }
+
+  racePaused = false;
+
+  updateRaceTimer();
+  raceTimerInterval = setInterval(updateRaceTimer, 100);
+}
+
+function pauseRace(btn) {
+
+  // ▶️ REANUDAR
+  if (racePaused) {
+
+    const pausedFor = pauseStartedAt ? (Date.now() - pauseStartedAt) : 0;
+
+    if (pausedFor > 0) {
+      for (const pid in lastLapAtByPid) {
+        if (typeof lastLapAtByPid[pid] === "number") {
+          lastLapAtByPid[pid] += pausedFor;
+        }
+      }
+    }
+
+    pauseStartedAt = null;
+
+    // (tu reset de simulador si lo tienes)
+    for (const p of participantsCache) delete lastKeyPressAtByPid[p.id];
+
+    startRaceTimer(true);
+
+    racePaused = false;
+    if (btn) btn.textContent = "Pause";
+    return;
+  }
+
+  // ⏸️ PAUSAR
+  if (!raceStartTime) return;
+
+  racePausedElapsed = Date.now() - raceStartTime;
+  stopRaceTimer();
+
+  racePaused = true;
+  pauseStartedAt = Date.now();
+
+  if (btn) btn.textContent = "Resume";
+}
+
+
+  function stopRaceTimer() {
+    if (raceTimerInterval) clearInterval(raceTimerInterval);
+    raceTimerInterval = null;
+  }
+
+  function updateRaceTimer() {
+    if (!raceStartTime) return;
+    const diff = Date.now() - raceStartTime;
+    document.getElementById("race-timer-header").textContent = formatMs(diff);
+  }
+let postFinishCountdownInterval = null;
+
+function startPostFinishCountdownUI() {
+  const el = document.getElementById("race-timer-header");
+  if (!el) return;
+
+  if (postFinishCountdownInterval) clearInterval(postFinishCountdownInterval);
+
+  const tick = () => {
+    const leftMs = Math.max(0, postFinishLockUntil - Date.now());
+    const leftSec = Math.ceil(leftMs / 1000);
+
+    if (leftMs <= 0) {
+      clearInterval(postFinishCountdownInterval);
+      postFinishCountdownInterval = null;
+      // vuelve a mostrar crono normal (o déjalo como estaba)
+      // el.textContent = "00:00:00.000";
+      return;
+    }
+
+    // 👇 “números” en cuenta atrás
+    el.textContent = String(leftSec);
+  };
+
+  tick();
+  postFinishCountdownInterval = setInterval(tick, 200);
+}
+  // ========= SEMÁFORO LOCAL =========
+  function startCountdown(seconds) {
+    resetCountdown();
+    countdownRemaining = seconds;
+    const el = document.getElementById("countdown");
+    el.textContent = countdownRemaining;
+
+    countdownTimer = setInterval(() => {
+      countdownRemaining--;
+      if (countdownRemaining > 0) el.textContent = countdownRemaining;
+      else if (countdownRemaining === 0) el.textContent = "GO!";
+      else resetCountdown();
+    }, 1000);
+  }
+
+  function resetCountdown() {
+    const el = document.getElementById("countdown");
+    el.textContent = "LISTO";
+    countdownRemaining = 0;
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+
+ // ========= RESTAURAR TIEMPO MÍNIMO DE VUELTA =========
+const savedMinLapMs = Number(localStorage.getItem("minLapMs") || 0);
+
+if (savedMinLapMs > 0) {
+  minLapMs = savedMinLapMs;
+}
+document.addEventListener("DOMContentLoaded", syncMinLapInput);
+
+function processLap(lap) {
+  if (!currentSession) return;
+  if (currentSession.status !== "running") return;
+  if (Number(lap.session_id) !== Number(currentSession.id)) return;
+
+  const p = participantsCache.find(x => x.id === lap.participant_id);
+  if (!p) return;
+
+  const lapMs = Number(lap.lap_time_ms);
+  if (!Number.isFinite(lapMs) || lapMs <= 0) return;
+
+  const now = Date.now();
+
+  // ⛔ Antirebote
+  if (lastLapAtByPid[p.id] && now - lastLapAtByPid[p.id] < 1500) return;
+  lastLapAtByPid[p.id] = now;
+
+  p.lapTimes ??= [];
+
+  // 🚫 Validez por tiempo mínimo
+  const isValid = !minLapMs || lapMs >= minLapMs;
+
+  // 🧾 Guardar vuelta (SIEMPRE)
+  p.lapTimes.push({
+    ms: lapMs,
+    valid: isValid
+  });
+
+  // ✅ Solo válidas afectan clasificación
+  if (isValid) {
+    p.laps = (p.laps || 0) + 1;
+    p.totalMs = (p.totalMs || 0) + lapMs;
+    p.lastLapMs = lapMs;
+    p.bestLapMs =
+      p.bestLapMs == null ? lapMs : Math.min(p.bestLapMs, lapMs);
+  }
+
+  console.log(
+    `${isValid ? "✅" : "🚫"} VUELTA → ${p.driver_name} | ${formatLapMs(lapMs)}`
+  );
+
+  renderLiveFromLatest();
+  renderLapByLap();
+
+  // 📤 ACTUALIZAR tiempos.json EN DIRECTO
+  syncLiveJSON();
+}
+
+
+ // ========= TIEMPO MÍNIMO VUELTA (EN SEGUNDOS) =========
+ function syncMinLapInput() {
+  const input = document.getElementById("min-lap-input");
+  if (!input) return;
+
+  input.value = minLapMs > 0 ? (minLapMs / 1000) : "";
+}
+
+function saveMinLap() {
+  const sec = Number(document.getElementById("min-lap-input").value || 0);
+
+  // convertir segundos → milisegundos
+  minLapMs = sec > 0 ? Math.round(sec * 1000) : 0;
+
+  localStorage.setItem("minLapMs", String(minLapMs));
+
+  alert(
+    "Tiempo mínimo guardado: " +
+    (minLapMs ? (minLapMs / 1000) + " s" : "desactivado")
+  );
+
+  // 🔑 sincronizar UI (SIEMPRE en segundos)
+  syncMinLapInput();
+}
+// ===============================
+// 🤖 AUTO TANDAS (CONFIG + ESTADO)
+// ===============================
+const AUTO = {
+  enabled: false,
+  ledMode: "none",     // none | alquiler | junior
+  finishMode: "time",  // time | laps
+  raceMinutes: 8,
+  raceLaps: 10,
+  clientEmail: "",
+  startedByAuto: false,
+  finishedByAuto: false,
+  finishTimerId: null
+};
+// ===============================
+// 🔒 SEGURIDAD POST-FINISH (anti auto-reinicio)
+// ===============================
+let postFinishLockUntil = 0;
+
+// tiempo de seguridad configurable (ms)
+let postFinishSafetyMs = Number(localStorage.getItem("postFinishSafetyMs") || 0) || 15000; // 15s por defecto
+
+function setPostFinishSafetyMs(seconds) {
+  const s = Math.max(0, Number(seconds) || 0);
+  postFinishSafetyMs = Math.round(s * 1000);
+  localStorage.setItem("postFinishSafetyMs", String(postFinishSafetyMs));
+  syncPostFinishSafetyInput();
+}
+
+function syncPostFinishSafetyInput() {
+  const el = document.getElementById("post-finish-safety");
+  if (!el) return;
+  el.value = postFinishSafetyMs ? Math.round(postFinishSafetyMs / 1000) : 0;
+}
+
+function lockAfterFinishNow() {
+  postFinishLockUntil = Date.now() + (postFinishSafetyMs || 0);
+  startPostFinishCountdownUI(); // ✅ activa la cuenta atrás
+}
+
+
+function startPostFinishCountdownUI() {
+  const el = document.getElementById("post-finish-countdown");
+  if (!el) return;
+
+  if (postFinishCountdownInterval) clearInterval(postFinishCountdownInterval);
+
+  const tick = () => {
+    const leftMs = Math.max(0, postFinishLockUntil - Date.now());
+    const leftSec = Math.ceil(leftMs / 1000);
+
+    if (leftMs <= 0) {
+      clearInterval(postFinishCountdownInterval);
+      postFinishCountdownInterval = null;
+      el.textContent = "";
+      return;
+    }
+
+    el.textContent = `⏳ ${leftSec}`;
+  };
+
+  tick();
+  postFinishCountdownInterval = setInterval(tick, 200);
+}
+function isPostFinishLocked() {
+  return Date.now() < postFinishLockUntil;
+}
+function loadAutoConfig() {
+  try {
+    const raw = localStorage.getItem("autoTandasConfig");
+    if (raw) Object.assign(AUTO, JSON.parse(raw));
+  } catch {}
+}
+
+function saveAutoConfig() {
+  localStorage.setItem("autoTandasConfig", JSON.stringify({
+    enabled: !!AUTO.enabled,
+    ledMode: AUTO.ledMode,
+    finishMode: AUTO.finishMode,
+    raceMinutes: Number(AUTO.raceMinutes) || 8,
+    raceLaps: Number(AUTO.raceLaps) || 10,
+    clientEmail: (AUTO.clientEmail || "").trim()
+  }));
+}
+
+function bindAutoUI() {
+  const elEnabled = document.getElementById("auto-enabled");
+  const elLed = document.getElementById("auto-led-mode");
+  const elFinish = document.getElementById("auto-finish-mode");
+  const elMin = document.getElementById("auto-race-minutes");
+  const elLaps = document.getElementById("auto-race-laps");
+
+  // ✅ opcional
+  const elEmail = document.getElementById("auto-client-email");
+  const elPostFinish = document.getElementById("post-finish-safety");
+
+  // ✅ críticos (email NO)
+  const missing = [];
+  if (!elEnabled) missing.push("auto-enabled");
+  if (!elLed) missing.push("auto-led-mode");
+  if (!elFinish) missing.push("auto-finish-mode");
+  if (!elMin) missing.push("auto-race-minutes");
+  if (!elLaps) missing.push("auto-race-laps");
+
+  if (missing.length) {
+    console.warn("bindAutoUI: faltan elementos:", missing.join(", "));
+    return;
+  }
+
+  // pintar valores
+  elEnabled.value = AUTO.enabled ? "on" : "off";
+  elLed.value = AUTO.ledMode || "none";
+  elFinish.value = AUTO.finishMode || "time";
+  elMin.value = AUTO.raceMinutes ?? 8;
+  elLaps.value = AUTO.raceLaps ?? 10;
+
+  // ✅ email solo si existe
+  if (elEmail) elEmail.value = AUTO.clientEmail ?? "";
+
+  // post-finish (si existe)
+  if (elPostFinish) {
+    elPostFinish.value = postFinishSafetyMs ? Math.round(postFinishSafetyMs / 1000) : 0;
+    elPostFinish.addEventListener("change", () => {
+      const seconds = Math.max(0, Number(elPostFinish.value) || 0);
+      postFinishSafetyMs = Math.round(seconds * 1000);
+      localStorage.setItem("postFinishSafetyMs", String(postFinishSafetyMs));
+    });
+  }
+
+  const syncVisibility = () => {
+    const byTime = (elFinish.value === "time");
+    elMin.style.display = byTime ? "inline-block" : "none";
+    elLaps.style.display = byTime ? "none" : "inline-block";
+  };
+  syncVisibility();
+
+  elEnabled.addEventListener("change", () => {
+    AUTO.enabled = (elEnabled.value === "on");
+    saveAutoConfig();
+  });
+  elLed.addEventListener("change", () => {
+    AUTO.ledMode = elLed.value;
+    saveAutoConfig();
+  });
+  elFinish.addEventListener("change", () => {
+    AUTO.finishMode = elFinish.value;
+    syncVisibility();
+    saveAutoConfig();
+  });
+  elMin.addEventListener("change", () => {
+    AUTO.raceMinutes = Number(elMin.value || 0) || 8;
+    saveAutoConfig();
+  });
+  elLaps.addEventListener("change", () => {
+    AUTO.raceLaps = Number(elLaps.value || 0) || 10;
+    saveAutoConfig();
+  });
+
+  // ✅ listener email solo si existe
+  if (elEmail) {
+    elEmail.addEventListener("change", () => {
+      AUTO.clientEmail = (elEmail.value || "").trim();
+      saveAutoConfig();
+    });
+  }
+}
+function clearAutoFinishTimer() {
+  if (AUTO.finishTimerId) clearTimeout(AUTO.finishTimerId);
+  AUTO.finishTimerId = null;
+}
+
+function getLedButtonByMode(mode) {
+  // Busca el botón por texto (ALQUILER/JUNIOR)
+  const buttons = Array.from(document.querySelectorAll("button.btn.flag"));
+  if (mode === "alquiler") return buttons.find(b => b.textContent.trim() === "ALQUILER") || null;
+  if (mode === "junior") return buttons.find(b => b.textContent.trim() === "JUNIOR") || null;
+  return null;
+}
+
+function autoActivateLed() {
+  if (!AUTO.enabled) return;
+  if (AUTO.ledMode === "none") return;
+
+  const btn = getLedButtonByMode(AUTO.ledMode);
+  if (!btn) return;
+
+  // IDs ya están en tu HTML: ALQUILER=29, JUNIOR=33 :contentReference[oaicite:6]{index=6}
+  const code = (AUTO.ledMode === "alquiler") ? 29 : 33;
+  try { ledSendPro(code, btn); } catch {}
+}
+
+// --- START sin confirm (tu startRace() tiene confirm) :contentReference[oaicite:7]{index=7}
+async function startRaceAuto() {
+  if (!currentSession) return;
+  if (currentSession.status === "running") return;
+
+  AUTO.startedByAuto = true;
+  AUTO.finishedByAuto = false;
+
+  // Copia de tu startRace() pero sin confirm:
+  isRaceStarting = true;
+  forceFreshStart = true;
+
+  raceStartTime = Date.now();
+  stopRaceTimer();
+  updateRaceTimer();
+
+  participantsCache.forEach(p => {
+    p.laps = 0;
+    p.lastLapMs = null;
+    p.bestLapMs = null;
+    p.totalMs = 0;
+    p.lapTimes = [];
+    lastLapAtByPid[p.id] = null;
+    lastRawTimeByPid[p.id] = null;
+    lastKeyPressAtByPid[p.id] = null;
+  });
+
+  renderLapByLap();
+
+  latestLiveData = {
+    bestLapTime: null,
+    classification: participantsCache.map((p, i) => ({
+      participant_id: p.id,
+      lapcount: 0,
+      lastTime: null,
+      best: null,
+      time: null,
+      pos: i + 1
+    }))
+  };
+
+  await fetch(`${API}/sessions/${currentSession.id}/start`, { method: "POST" }).catch(()=>{});
+  const res = await fetch(`${API}/sessions/${currentSession.id}`).catch(()=>null);
+  if (res && res.ok) currentSession = await res.json();
+
+  updateSessionHeader(currentSession);
+  startRaceTimer();
+
+  persistState();
+
+  forceFreshStart = false;
+  isRaceStarting = false;
+
+  autoActivateLed();
+  scheduleAutoFinishIfNeeded();
+}
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+async function sendPdfBlobToEmail(email, blob) {
+  const fd = new FormData();
+  fd.append("email", email);
+  fd.append("session_id", String(currentSession?.id || ""));
+  fd.append("file", blob, `informe_completo_${currentSession?.id || "sesion"}.pdf`);
+
+  const res = await fetch(`${API}/email/session-report`, {
+    method: "POST",
+    body: fd
+  });
+
+  const txt = await res.text();               // 👈 CLAVE
+  if (!res.ok) {
+    console.error("❌ /session-report status:", res.status, "body:", txt);
+    throw new Error(txt);                      // 👈 verás el motivo exacto
+  }
+
+  return txt;
+}
+async function emailReportToAllDriversPro({ alsoClientEmail = null } = {}) {
+  const participants = participantsCache || [];
+  if (!participants.length) return { sent: 0, errors: [] };
+
+  // ✅ 1) Generar el PDF UNA vez
+  const blob = await exportOnePageReportPDFBlob(); // IMPORTANTE: esta función debe ser async y devolver blob real
+  if (!blob || blob.size === 0) throw new Error("PDF vacío");
+
+  const emailsSent = new Set();
+  const errors = [];
+
+  // ✅ 2) Enviar a pilotos
+  for (const p of participants) {
+    try {
+      const driverId = p.driver_id || p.driverId || p.driver?.id;
+      const email = await getDriverEmailById(driverId);
+
+      if (!email || !email.includes("@")) continue;
+      if (emailsSent.has(email)) continue;
+
+      await sendPdfBlobToEmail(email, blob);
+      emailsSent.add(email);
+
+      await sleep(800); // anti-límites SMTP
+    } catch (e) {
+      errors.push({
+        driver: p?.driver_name || p?.driver_id,
+        error: String(e?.message || e)
+      });
+    }
+  }
+
+  // ✅ 3) (Opcional) Enviar también al email cliente/grupo si existe
+  if ((alsoClientEmail || "").includes("@") && !emailsSent.has(alsoClientEmail)) {
+    try {
+      await sendPdfBlobToEmail(alsoClientEmail, blob);
+      emailsSent.add(alsoClientEmail);
+    } catch (e) {
+      errors.push({ driver: "CLIENT_EMAIL", error: String(e?.message || e) });
+    }
+  }
+
+  console.log("📧 Emails enviados:", emailsSent.size, "Errores:", errors);
+  return { sent: emailsSent.size, errors };
+}
+async function finishRaceAuto() {
+  if (!currentSession) return;
+  if (currentSession.status !== "running") return;
+  if (AUTO.finishedByAuto) return;
+
+  AUTO.finishedByAuto = true;
+  clearAutoFinishTimer();
+
+  await fetch(`${API}/sessions/${currentSession.id}/finish`, { method: "POST" }).catch(()=>{});
+  lockAfterFinishNow();
+  await selectSession(currentSession.id);
+  persistState();
+
+  // ✅ Enviar informe a TODOS los pilotos (y opcionalmente al clientEmail si lo quieres mantener)
+  try {
+    const { sent, errors } = await emailReportToAllDriversPro({
+      alsoClientEmail: AUTO.clientEmail || null   // si lo quieres opcional
+    });
+
+    // si no quieres alerts, quítalos
+   console.log(`📧 Informes enviados: ${sent}. Errores: ${errors.length}`);
+  } catch (e) {
+    console.error("❌ Error enviando informes:", e);
+    alert("⚠️ La tanda terminó, pero falló el envío de emails (ver consola).");
+  }
+}
+function scheduleAutoFinishIfNeeded() {
+  clearAutoFinishTimer();
+  if (!AUTO.enabled) return;
+  if (!currentSession || currentSession.status !== "running") return;
+
+  if (AUTO.finishMode === "time") {
+    const ms = Math.max(1, Number(AUTO.raceMinutes || 0)) * 60 * 1000;
+    AUTO.finishTimerId = setTimeout(() => finishRaceAuto(), ms);
+  }
+}
+
+// Para modo "laps": se chequea cada vez que entra una vuelta válida
+function checkAutoFinishByLaps() {
+  if (!AUTO.enabled) return;
+  if (AUTO.finishMode !== "laps") return;
+  if (!currentSession || currentSession.status !== "running") return;
+
+  const target = Math.max(1, Number(AUTO.raceLaps || 0));
+  const leaderLaps = Math.max(0, ...participantsCache.map(p => p.laps || 0));
+
+  if (leaderLaps >= target) {
+    finishRaceAuto();
+  }
+}
+
+
+
+  // ========= CONFIG VOZ =========
+  function initVoiceConfig() {
+    const enabled = localStorage.getItem("voiceEnabled");
+    const mode = localStorage.getItem("voiceMode");
+    const rate = localStorage.getItem("voiceRate");
+    const volume = localStorage.getItem("voiceVolume");
+
+    voiceEnabled = enabled === "true";
+    voiceMode = mode || "kart";
+    voiceRate = rate ? Number(rate) : 1;
+    voiceVolume = volume ? Number(volume) : 1;
+
+    document.getElementById("voice-enabled").checked = voiceEnabled;
+    document.getElementById("voice-mode").value = voiceMode;
+    document.getElementById("voice-rate").value = voiceRate;
+    document.getElementById("voice-volume").value = voiceVolume;
+
+    document.getElementById("voice-enabled").addEventListener("change", e => {
+      voiceEnabled = e.target.checked;
+      localStorage.setItem("voiceEnabled", String(voiceEnabled));
+    });
+    document.getElementById("voice-mode").addEventListener("change", e => {
+      voiceMode = e.target.value;
+      localStorage.setItem("voiceMode", voiceMode);
+    });
+    document.getElementById("voice-rate").addEventListener("input", e => {
+      voiceRate = Number(e.target.value);
+      localStorage.setItem("voiceRate", String(voiceRate));
+    });
+    document.getElementById("voice-volume").addEventListener("input", e => {
+      voiceVolume = Number(e.target.value);
+      localStorage.setItem("voiceVolume", String(voiceVolume));
+    });
+  }
+
+  function toggleVoicePanel() {
+    const p = document.getElementById("voice-panel");
+    p.style.display = (p.style.display === "block") ? "none" : "block";
+  }
+
+  // ========= PANEL CASCO (F2 + drag) =========
+  const panel = document.getElementById("panel-registros");
+  let dragHeader = panel?.querySelector(".drag-header") || null;
+
+  function togglePanel() {
+    if (!panel) return;
+    panel.classList.toggle("visible");
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "F2") { e.preventDefault(); togglePanel(); }
+    if (e.key === "Escape") { closeGridEditor(); }
+  });
+
+  // Drag panel
+  let dragging = false, offX = 0, offY = 0;
+
+  dragHeader?.addEventListener("mousedown", (e) => {
+    dragging = true;
+    const rect = panel.getBoundingClientRect();
+    offX = e.clientX - rect.left;
+    offY = e.clientY - rect.top;
+    document.body.style.userSelect = "none";
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging || !panel) return;
+    panel.style.left = (e.clientX - offX) + "px";
+    panel.style.top = (e.clientY - offY) + "px";
+    panel.style.right = "auto";
+  });
+
+  document.addEventListener("mouseup", () => {
+    dragging = false;
+    document.body.style.userSelect = "auto";
+  });
+
+  // ========= MENÚ CONTEXTUAL VUELTAS =========
+  function openLapEditMenu(evt, cell) {
+    evt.preventDefault();
+    editLapTarget = cell;
+    const menu = document.getElementById("edit-lap-menu");
+    menu.style.left = evt.clientX + "px";
+    menu.style.top = evt.clientY + "px";
+    menu.style.display = "block";
+  }
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#edit-lap-menu")) {
+      document.getElementById("edit-lap-menu").style.display = "none";
+    }
+  });
+
+  async function deleteLapFromTiming() {
+    const cell = editLapTarget;
+    if (!cell || !currentSession) return;
+
+    const pid = Number(cell.dataset.participant);
+    const lapNumber = Number(cell.dataset.lapcount);
+
+    if (!confirm(`¿Borrar la vuelta ${lapNumber}?`)) return;
+
+    const res = await fetch(`${API}/sessions/${currentSession.id}/participants/${pid}/laps/${lapNumber}`, { method: "DELETE" });
+    if (!res.ok) return alert(await res.text());
+
+    document.getElementById("edit-lap-menu").style.display = "none";
+    await loadLiveExtended();
+	renderLapByLap();
+
+
+
+    await loadLapsForParticipant(pid);
+  }
+
+  async function editLapFromTiming() {
+    const cell = editLapTarget;
+    if (!cell || !currentSession) return;
+
+    const pid = Number(cell.dataset.participant);
+    const lapNumber = Number(cell.dataset.lapcount);
+
+    const currentMs = (cell.dataset.ms !== undefined && cell.dataset.ms !== "") ? Number(cell.dataset.ms) : null;
+    const newMs = prompt("Nuevo tiempo de vuelta en milisegundos:", (currentMs != null && !isNaN(currentMs)) ? String(currentMs) : "");
+    if (newMs === null) return;
+
+    const val = Number(newMs);
+    if (isNaN(val) || val <= 0) return alert("Tiempo inválido");
+
+    const res = await fetch(`${API}/sessions/${currentSession.id}/participants/${pid}/laps/${lapNumber}`, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ lap_time_ms: val })
+    });
+    if (!res.ok) return alert(await res.text());
+
+    document.getElementById("edit-lap-menu").style.display = "none";
+    await loadLiveExtended();
+	renderLapByLap();
+
+    await loadLapsForParticipant(pid);
+  }
+
+  // ========= HISTORIAL VUELTAS =========
+  async function openLapsPanel(pid) {
+    document.getElementById("laps-panel").style.display = "block";
+    await loadLapsForParticipant(pid);
+  }
+
+  function closeLapsPanel() {
+    document.getElementById("laps-panel").style.display = "none";
+  }
+
+  async function loadLapsForParticipant(pid) {
+    if (!currentSession) return;
+    const res = await fetch(`${API}/sessions/${currentSession.id}/participants/${pid}/laps`);
+    if (!res.ok) return;
+
+    const laps = await res.json();
+    const p = participantsCache.find(x => Number(x.id) === Number(pid));
+    const header = document.getElementById("laps-panel-header");
+    header.textContent = p ? `Piloto: ${p.driver_name || "-"} | Kart: ${p.kart_number != null ? "#" + p.kart_number : "-"}` : "Piloto / Kart";
+
+    const body = document.getElementById("laps-panel-body");
+    if (!laps.length) {
+      body.innerHTML = '<tr><td colspan="3" class="muted">Sin vueltas</td></tr>';
+      return;
+    }
+
+    body.innerHTML = laps.map(l => `
+      <tr>
+        <td>${l.lap_number}</td>
+        <td>${formatLapMs(l.lap_time_ms)}</td>
+        <td>
+          <button class="btn" style="padding:0.1rem 0.4rem;font-size:0.75rem;" onclick="editLapTime(${pid}, ${l.id}, ${l.lap_time_ms})">✏</button>
+          <button class="btn" style="padding:0.1rem 0.4rem;font-size:0.75rem;background:#ef4444;border-color:#ef4444;" onclick="deleteLap(${pid}, ${l.id})">🗑</button>
+        </td>
+      </tr>`).join("");
+  }
+
+async function deleteLap(pid, lapId) {
+  if (!currentSession) return;
+  if (!confirm("¿Borrar esta vuelta?")) return;
+
+  const res = await fetch(
+    `${API}/sessions/${currentSession.id}/participants/${pid}/laps/${lapId}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) return alert(await res.text());
+
+  // 🔁 ACTUALIZAR ESTADO LOCAL (SIN BACKEND)
+  const p = participantsCache.find(x => Number(x.id) === Number(pid));
+  if (p && Array.isArray(p.lapTimes)) {
+    // borrar por índice (lapId backend ≠ índice, así que recargamos desde panel)
+    p.lapTimes.splice(lapId - 1, 1);
+
+    p.laps = p.lapTimes.length;
+    p.totalMs = p.lapTimes.reduce((a, b) => a + b, 0);
+    p.bestLapMs = p.lapTimes.length ? Math.min(...p.lapTimes) : null;
+    p.lastLapMs = p.lapTimes.at(-1) ?? null;
+  }
+
+  // 🔒 Persistir estado
+  persistState();
+
+  // 🔁 REPINTAR
+  renderLiveFromLatest();
+  renderLapByLap();
+
+  // refrescar panel lateral de laps (si está abierto)
+  await loadLapsForParticipant(pid);
+}
+
+
+  async function editLapTime(pid, lapId, ms) {
+  if (!currentSession) return;
+
+  const newVal = prompt("Nuevo tiempo (ms):", ms);
+  if (newVal === null) return;
+
+  const n = Number(newVal);
+  if (isNaN(n) || n <= 0) return alert("Valor inválido");
+
+  const res = await fetch(
+    `${API}/sessions/${currentSession.id}/participants/${pid}/laps/${lapId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lap_time_ms: n })
+    }
+  );
+  if (!res.ok) return alert(await res.text());
+
+  // 🔁 ACTUALIZAR ESTADO LOCAL (SIN BACKEND)
+  const p = participantsCache.find(x => Number(x.id) === Number(pid));
+  if (p && Array.isArray(p.lapTimes)) {
+    // lapId suele ser 1-based → índice = lapId - 1
+    const idx = lapId - 1;
+    if (idx >= 0 && idx < p.lapTimes.length) {
+      p.lapTimes[idx] = n;
+
+      p.laps = p.lapTimes.length;
+      p.totalMs = p.lapTimes.reduce((a, b) => a + b, 0);
+      p.bestLapMs = Math.min(...p.lapTimes);
+      p.lastLapMs = p.lapTimes.at(-1) ?? null;
+    }
+  }
+
+  // 🔒 Persistir estado
+  persistState();
+
+  // 🔁 REPINTAR
+  renderLiveFromLatest();
+  renderLapByLap();
+
+  // refrescar panel lateral de laps
+  await loadLapsForParticipant(pid);
+}
+
+
+  // ========= INIT =========
+  (function initMinLap(){
+    const saved = Number(localStorage.getItem("minLapMs") || 0);
+    document.getElementById("min-lap-input").value = saved;
+    minLapMs = saved;
+  })();
+
+ (async function initApp() {
+  initVoiceConfig();
+
+  // 🔑 MUY IMPORTANTE: esperar a drivers
+  await loadDriversAndKarts();
+
+  // 🔑 ahora sí, sesiones
+  await loadSessions();
+
+  console.log("✅ App inicializada con drivers cargados");
+})();
+
+
+  // refresco periódico del live
+  setInterval(loadLiveExtended, 2000);
+  // 🔥 RESTAURACIÓN FINAL ANTI-REFRESH (CRÍTICO)
+window.addEventListener("load", () => {
+  if (!currentSession) return;
+
+  const restored = restoreStateIfNeeded();
+  if (restored) {
+    console.log("♻️ Estado restaurado en LOAD final");
+    renderLiveFromLatest();
+    renderLapByLap();
+  }
+});
+ // ========= JSON =========
+ function syncLiveJSON() {
+  const payload = {
+    updatedAt: new Date().toISOString(),
+    session: {
+      id: currentSession?.id ?? null,
+      name: currentSession?.name ?? null,
+      status: currentSession?.status ?? null,
+      mode: document.getElementById("ranking-mode")?.value || "race"
+    },
+    classification: (buildClassification() || []).filter(Boolean),
+    participants: participantsCache.map(p => ({
+      id: p.id,
+      name: p.driver_name,
+      kart: p.kart_number,
+      laps: p.laps || 0,
+      bestLapMs: p.bestLapMs ?? null,
+      totalMs: p.totalMs ?? null,
+      lapTimes: p.lapTimes || []
+    }))
+  };
+
+  fetch("/api/tiempos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }).catch(err => {
+    console.warn("No se pudo actualizar tiempos.json", err);
+  });
+}
+
+// ========= PDF CONFIG =========
+const pdfColumns = [
+  { key:"position", label:"Pos",   enabled:true,  align:"left",  width:0.2 },
+  { key:"number",   label:"Nº",    enabled:true,  align:"left",  width:0.6 },
+
+  { key:"pilot",    label:"Piloto",enabled:true,  align:"left",  width:1.0 },
+  { key:"nick",     label:"Nick",  enabled:true,  align:"left",  width:1.2 },
+  { key:"weight",   label:"Peso",  enabled:true,  align:"left",  width:1.2 },
+  { key:"category", label:"Cat",   enabled:true,  align:"left",  width:0.9 },
+
+  { key:"laps",     label:"V",     enabled:true,  align:"right", width:1.0 },
+
+  { key:"lastLap",  label:"Últ.",  enabled:false, align:"right", width:1.6 },
+  { key:"media",    label:"Media", enabled:false, align:"right", width:1.2 },
+
+  { key:"bestLap",  label:"Mejor", enabled:true,  align:"right", width:0.8 },
+  { key:"total",    label:"Total", enabled:true,  align:"right", width:1.6 },
+
+  { key:"gap",      label:"GAP",   enabled:true,  align:"right", width:1.2 },
+  { key:"diff",     label:"DIFF",  enabled:true,  align:"right", width:1.2 },
+
+  { key:"consistency", label:"Cons.", enabled:true, align:"right", width:1.2 }
+];
+const PDF_COLS_STORAGE_KEY = "racecontrol_pdfcols_v1";
+
+function savePdfColsToStorage() {
+  try {
+    const map = {};
+    pdfColumns.forEach(c => (map[c.key] = !!c.enabled));
+    localStorage.setItem(PDF_COLS_STORAGE_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.warn("No se pudo guardar opciones PDF", e);
+  }
+}
+
+function loadPdfColsFromStorage() {
+  try {
+    const raw = localStorage.getItem(PDF_COLS_STORAGE_KEY);
+    if (!raw) return;
+    const map = JSON.parse(raw);
+    pdfColumns.forEach(c => {
+      if (Object.prototype.hasOwnProperty.call(map, c.key)) {
+        c.enabled = !!map[c.key];
+      }
+    });
+  } catch (e) {
+    console.warn("No se pudo cargar opciones PDF", e);
+  }
+}
+
+function applyPdfColsToUI() {
+  document.querySelectorAll("[data-pdf-col]").forEach(cb => {
+    const col = pdfColumns.find(c => c.key === cb.dataset.pdfCol);
+    if (col) cb.checked = !!col.enabled;
+  });
+}
+
+function bindPdfColsUI() {
+  document.querySelectorAll("[data-pdf-col]").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const col = pdfColumns.find(c => c.key === cb.dataset.pdfCol);
+      if (!col) return;
+      col.enabled = cb.checked;
+      savePdfColsToStorage();
+    });
+  });
+}
+// ✅ Lee checkboxes → actualiza pdfColumns.enabled
+function syncPdfColumnsFromUI() {
+  const inputs = document.querySelectorAll("[data-pdf-col]");
+  inputs.forEach(input => {
+    const key = input.dataset.pdfCol;
+    const col = pdfColumns.find(c => c.key === key);
+    if (!col) return;
+    col.enabled = input.checked;
+  });
+}
+
+// ✅ Layout real (x inicio + ancho) por columna
+function buildPdfColumns(startX, pageWidth, marginRight) {
+  const enabled = pdfColumns.filter(c => c.enabled);
+
+  const usableWidth = pageWidth - marginRight - startX;
+  const totalWeight = enabled.reduce((sum, c) => sum + (c.width || 1), 0);
+
+  const layout = {};
+  let x = startX;
+
+  enabled.forEach(c => {
+    const w = (usableWidth * (c.width || 1)) / totalWeight;
+    layout[c.key] = { x, w, align: c.align || "left", label: c.label };
+    x += w;
+  });
+
+  return { enabled, layout };
+}
+
+// ✅ Recorta texto para que no invada la siguiente columna
+function fitText(doc, text, maxWidth) {
+  text = String(text ?? "-");
+  if (doc.getTextWidth(text) <= maxWidth) return text;
+
+  const ell = "…";
+  let t = text;
+  while (t.length > 0 && doc.getTextWidth(t + ell) > maxWidth) {
+    t = t.slice(0, -1);
+  }
+  return t.length ? (t + ell) : ell;
+}
+
+// ✅ Dibuja una celda respetando alineación y recorte
+function drawCell(doc, cell, text, y, options = {}) {
+  const pad = options.pad ?? 1.2;
+  const cutLeft = options.cutLeft ?? true;
+
+  const raw = (text === null || text === undefined || text === "") ? "-" : String(text);
+  const maxW = Math.max(2, cell.w - pad * 2);
+
+  const safe =
+    (cutLeft && cell.align === "left")
+      ? fitText(doc, raw, maxW)
+      : raw;
+
+  const x =
+    cell.align === "right"
+      ? (cell.x + cell.w - pad) // ✅ borde derecho real
+      : (cell.x + pad);         // ✅ borde izquierdo real
+
+  doc.text(
+    safe,
+    x,
+    y,
+    cell.align === "right" ? { align: "right" } : undefined
+  );
+}
+
+
+// ========= PDF EXPORT =========
+function getPdfCellValue(key, r) {
+  switch (key) {
+    case "position": return r.pos ?? "-";
+    case "number": return r.racerNumber ?? "-";
+    case "pilot": return r.racerName ?? "-";
+    case "nick": return r.nickname ?? "-";
+    case "weight": return r.weight != null ? Number(r.weight).toFixed(0) : "-";
+    case "category": return r.category ?? "-";
+    case "laps": return r.lapcount ?? 0;
+    case "lastLap": return r.lastTime ? formatLapMs(r.lastTime) : "-";
+    case "bestLap": return r.best ? formatLapMs(r.best) : "-";
+    case "total": return r.time ? formatMs(r.time) : "-";
+    case "gap": return r.gap ?? "-";
+    case "diff": return r.diff ?? "-";
+    case "media": return r.mean ? formatLapMs(r.mean) : "-";
+    case "consistency": return r.consistency != null ? r.consistency.toFixed(1) + "%" : "-";
+    default: return "";
+  }
+}
+
+
+// ===============================
+// 📄 PDF Clasificación (vertical)
+// ===============================
+function exportClassificationPDF_v2() {
+  syncPdfColumnsFromUI();
+
+  const rows = (buildClassification() || []).filter(Boolean);
+  if (!rows.length) {
+    alert("No hay datos para imprimir");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("p", "mm", "a4");
+
+  const marginLeft = 14;
+  const marginRight = 14;
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  const { enabled, layout } = buildPdfColumns(marginLeft, pageWidth, marginRight);
+
+  // LOGO
+  const logoImg = document.getElementById("track-logo");
+  if (logoImg && logoImg.complete) {
+    try { doc.addImage(logoImg, "PNG", 14, 10, 35, 18); } catch {}
+  }
+
+  // TITULO
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("TIEMPOS CARRERA", pageWidth / 2, 18, { align: "center" });
+
+  // SESION / FECHA
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Sesión: ${currentSession?.name || "-"}`, 14, 34);
+  doc.text(`Fecha: ${new Date().toLocaleString()}`, pageWidth - 14, 34, { align: "right" });
+
+  let y = 42;
+
+  // CABECERA
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+
+  enabled.forEach(col => {
+    const cell = layout[col.key];
+    if (!cell) return;
+    drawCell(doc, cell, col.label, y, { cutLeft: true });
+  });
+
+  y += 2;
+  doc.line(marginLeft, y, pageWidth - marginRight, y);
+  y += 5;
+
+  // FILAS
+  doc.setFont("helvetica", "normal");
+
+  rows.forEach(r => {
+    enabled.forEach(col => {
+      const cell = layout[col.key];
+      if (!cell) return;
+      const value = getPdfCellValue(col.key, r);
+      // recorta solo columnas left (pilot/nick/cat)
+      drawCell(doc, cell, value, y, { cutLeft: true });
+    });
+    y += 4;
+  });
+
+  doc.save(`informe_carrera_${currentSession?.id || "sesion"}.pdf`);
+}
+
+
+// ===================================
+// 📄 PDF Informe completo (horizontal) — BLOQUE CORREGIDO COMPLETO
+// ✅ 1) SIN duplicados
+// ✅ 2) syncPdfColumnsFromUI OK (pdfColumns es ARRAY)
+// ✅ 3) LOGO robusto (JPG/PNG)
+// ✅ 4) QR síncrono (await) -> no sale “a veces vacío”
+// ✅ 5) Paginación para tabla + vuelta a vuelta
+// ✅ 6) Email espera el blob (await)
+// ✅ 7) Envío masivo no se corta + pausa anti-límites
+// ===================================
+
+
+// ---------- Helpers ----------
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+function formatLapMsForPDF(ms) {
+  if (ms == null || isNaN(ms)) return "-";
+  const total = Math.max(0, Number(ms));
+  const m = Math.floor(total / 60000);
+  const s = Math.floor((total % 60000) / 1000);
+  const ms2 = total % 1000;
+  if (m > 0) return `${m}:${String(s).padStart(2,"0")}.${String(ms2).padStart(3,"0")}`;
+  return `${s}.${String(ms2).padStart(3,"0")}`;
+}
+
+function shortName(fullName) {
+  if (!fullName) return "-";
+  const parts = String(fullName).trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return `${parts[0][0]}. ${parts[1]}`;
+}
+
+// Convierte <img> a DataURL (evita fallos de addImage por formato/CORS)
+function imgElToDataURL(imgEl, mime="image/png") {
+  const c = document.createElement("canvas");
+  c.width = imgEl.naturalWidth || imgEl.width;
+  c.height = imgEl.naturalHeight || imgEl.height;
+  const ctx = c.getContext("2d");
+  ctx.drawImage(imgEl, 0, 0);
+  return c.toDataURL(mime);
+}
+
+// Espera a que una imagen esté cargada (si no, no rompe)
+function waitImage(imgEl) {
+  return new Promise(resolve => {
+    if (!imgEl) return resolve(false);
+    if (imgEl.complete && (imgEl.naturalWidth || 0) > 0) return resolve(true);
+    imgEl.onload = () => resolve(true);
+    imgEl.onerror = () => resolve(false);
+  });
+}
+
+// QR -> DataURL (PROMISE) para que jsPDF lo inserte SIEMPRE
+function sessionQRDataURL() {
+  if (!window.QRCode) return Promise.resolve(null);
+  if (!currentSession) return Promise.resolve(null);
+
+  const text =
+`RACE REPORT
+Session: ${currentSession.name || currentSession.id}
+Date: ${new Date().toLocaleString()}
+
+Official classification and lap times
+Generated by Race Control Pro`;
+
+  const canvas = document.createElement("canvas");
+
+  return new Promise(resolve => {
+    QRCode.toCanvas(
+      canvas,
+      text,
+      { width: 140, margin: 1, errorCorrectionLevel: "M" },
+      err => {
+        if (err) return resolve(null);
+        resolve(canvas.toDataURL("image/png"));
+      }
+    );
+  });
+}
+
+
+// ---------- PDF columns UI sync (pdfColumns ES ARRAY) ----------
+function syncPdfColumnsFromUI() {
+  const inputs = document.querySelectorAll("[data-pdf-col]");
+  inputs.forEach(input => {
+    const key = input.dataset.pdfCol;
+    const col = Array.isArray(pdfColumns) ? pdfColumns.find(c => c.key === key) : null;
+    if (!col) return;
+    col.enabled = !!input.checked;
+  });
+}
+
+function togglePrintOptions() {
+  const panel = document.getElementById("print-options");
+  if (!panel) return;
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+}
+
+function bindPdfColumnCheckboxes() {
+  document
+    .querySelectorAll('input[type="checkbox"][data-pdf-col]')
+    .forEach(cb => {
+      const key = cb.dataset.pdfCol;
+      const col = Array.isArray(pdfColumns) ? pdfColumns.find(c => c.key === key) : null;
+      if (!col) return;
+
+      cb.checked = !!col.enabled;
+
+      cb.addEventListener("change", () => {
+        col.enabled = cb.checked;
+        console.log("PDF column:", key, "=>", cb.checked);
+      });
+    });
+}
+
+
+// ===================================
+// 📄 PDF Informe completo (horizontal)
+// ===================================
+async function buildInformeCompletoDoc() {
+  syncPdfColumnsFromUI();
+
+  const rows = (buildClassification() || []).filter(Boolean);
+  if (!rows.length) return null;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("l", "mm", "a4");
+
+  const marginLeft = 8;
+  const marginRight = 8;
+  const marginTop = 8;
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  const usableWidth = pageWidth - marginLeft - marginRight;
+
+  // buildPdfColumns: tu función existente
+  const { enabled, layout } = buildPdfColumns(marginLeft, pageWidth, marginRight);
+
+  // ---------- LOGO (robusto) ----------
+  const logoImg = document.getElementById("track-logo");
+  if (logoImg) {
+    const ok = await waitImage(logoImg);
+    if (ok) {
+      try {
+        const isJpg = /jpg|jpeg/i.test(logoImg.src || "");
+        const mime = isJpg ? "image/jpeg" : "image/png";
+        const fmt  = isJpg ? "JPEG" : "PNG";
+        const dataUrl = imgElToDataURL(logoImg, mime);
+        doc.addImage(dataUrl, fmt, marginLeft, marginTop, 30, 14);
+      } catch (e) {
+        console.warn("Logo no se pudo insertar:", e);
+      }
+    }
+  }
+
+  // ---------- TITULO ----------
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("INFORME COMPLETO DE CARRERA", pageWidth / 2, 14, { align: "center" });
+
+  // ---------- SESION / FECHA ----------
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Sesión: ${currentSession?.name || "-"}`, marginLeft, 26);
+  doc.text(`Fecha: ${new Date().toLocaleString()}`, pageWidth - marginRight, 26, { align: "right" });
+
+  let y = 32;
+
+  // ---------- CABECERA TABLA ----------
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+
+  enabled.forEach(col => {
+    const cell = layout[col.key];
+    if (!cell) return;
+    drawCell(doc, cell, col.label, y, { cutLeft: true });
+  });
+
+  y += 2;
+  doc.line(marginLeft, y, pageWidth - marginRight, y);
+  y += 5;
+
+  // ---------- FILAS TABLA (con paginación) ----------
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+
+  const rowHeight = 4;
+  const bottomLimit = pageHeight - 14; // margen inferior
+
+  for (const r of rows) {
+    // si no cabe, nueva página + reimprimir cabecera
+    if (y + rowHeight > bottomLimit) {
+      doc.addPage();
+      y = 16;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      enabled.forEach(col => {
+        const cell = layout[col.key];
+        if (!cell) return;
+        drawCell(doc, cell, col.label, y, { cutLeft: true });
+      });
+
+      y += 2;
+      doc.line(marginLeft, y, pageWidth - marginRight, y);
+      y += 5;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+    }
+
+    enabled.forEach(col => {
+      const cell = layout[col.key];
+      if (!cell) return;
+      const value = getPdfCellValue(col.key, r);
+      drawCell(doc, cell, String(value ?? "-"), y, { cutLeft: true });
+    });
+
+    y += rowHeight;
+  }
+
+  // =====================
+  // 🔁 VUELTA A VUELTA
+  // =====================
+  y += 8;
+  if (y > bottomLimit - 30) { doc.addPage(); y = 16; }
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("VUELTA A VUELTA", marginLeft, y);
+  y += 6;
+
+  const pilots = participantsCache || [];
+  const validLapsByPilot = pilots.map(p => (p.lapTimes || []).filter(l => l && l.valid));
+
+  const maxLaps = Math.max(0, ...validLapsByPilot.map(l => l.length));
+
+  const bestLapByPilot = validLapsByPilot.map(l =>
+    l.length ? Math.min(...l.map(x => x.ms)) : null
+  );
+
+  const bestGlobalLap = (() => {
+    const vals = bestLapByPilot.filter(v => v != null);
+    return vals.length ? Math.min(...vals) : null;
+  })();
+
+  const colCount = pilots.length + 1;
+  const colWidth = Math.max(14, usableWidth / Math.max(1, colCount));
+
+  // Header de vueltas
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+
+  let x = marginLeft;
+  doc.text("V", x, y);
+  x += colWidth;
+
+  const headerLineCounts = pilots.map(p => {
+    const name = shortName(p.driver_name || (p.kart_number != null ? `Kart ${p.kart_number}` : "Kart"));
+    return doc.splitTextToSize(name, colWidth - 2).length;
+  });
+
+  const headerHeight = Math.max(1, ...headerLineCounts) * 3;
+
+  pilots.forEach(p => {
+    const name = shortName(p.driver_name || (p.kart_number != null ? `Kart ${p.kart_number}` : "Kart"));
+    const lines = doc.splitTextToSize(name, colWidth - 2);
+    doc.text(lines, x, y);
+    x += colWidth;
+  });
+
+  y += headerHeight;
+  doc.line(marginLeft, y, pageWidth - marginRight, y);
+  y += 3;
+
+  // Body de vueltas (con paginación)
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+
+  for (let lap = 0; lap < maxLaps; lap++) {
+    if (y > bottomLimit - 6) {
+      doc.addPage();
+      y = 16;
+
+      // reimprime cabecera
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+
+      x = marginLeft;
+      doc.text("V", x, y);
+      x += colWidth;
+
+      pilots.forEach(p => {
+        const name = shortName(p.driver_name || (p.kart_number != null ? `Kart ${p.kart_number}` : "Kart"));
+        const lines = doc.splitTextToSize(name, colWidth - 2);
+        doc.text(lines, x, y);
+        x += colWidth;
+      });
+
+      y += headerHeight;
+      doc.line(marginLeft, y, pageWidth - marginRight, y);
+      y += 3;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+    }
+
+    x = marginLeft;
+    doc.text(String(lap + 1), x, y);
+    x += colWidth;
+
+    pilots.forEach((p, i) => {
+      const lapObj = validLapsByPilot[i]?.[lap];
+      if (!lapObj) { x += colWidth; return; }
+
+      const t = lapObj.ms;
+      const text = formatLapMsForPDF(t);
+
+      // Colores para destacar (si quieres mantenerlo)
+      if (bestGlobalLap != null && t === bestGlobalLap) {
+        doc.setTextColor(0, 160, 0);
+        doc.setFont("helvetica", "bold");
+      } else if (bestLapByPilot[i] != null && t === bestLapByPilot[i]) {
+        doc.setTextColor(160, 90, 255);
+        doc.setFont("helvetica", "bold");
+      }
+
+      doc.text(text, x, y);
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+
+      x += colWidth;
+    });
+
+    y += 3;
+  }
+
+  // ---------- QR (SÍNCRONO) ----------
+  try {
+    const qr = await sessionQRDataURL();
+    if (qr) {
+      const size = 28;
+      const qrX = pageWidth - marginRight - size;
+      const qrY = pageHeight - 10 - size;
+      doc.addImage(qr, "PNG", qrX, qrY, size, size);
+    }
+  } catch (e) {
+    console.warn("QR no insertado:", e);
+  }
+
+  return doc;
+}
+
+
+// ---------- Export ----------
+async function exportInformeCompletoPDF() {
+  const doc = await buildInformeCompletoDoc();
+  if (!doc) return alert("No hay datos para PDF.");
+  doc.save(`informe_sesion_${currentSession?.id || "sesion"}.pdf`);
+}
+
+async function exportInformeCompletoPDFBlob() {
+  const doc = await buildInformeCompletoDoc();
+  if (!doc) return null;
+  return doc.output("blob");
+}
+
+// compatibilidad con tu nombre actual
+async function exportOnePageReportPDFBlob() {
+  return await exportInformeCompletoPDFBlob();
+}
+
+
+// ---------- Email ----------
+async function sendFullReportPdfToEmail(email) {
+  const blob = await exportOnePageReportPDFBlob();   // ✅ await
+  if (!blob || blob.size === 0) {
+    console.error("PDF vacío: blob size =", blob?.size);
+    throw new Error("PDF vacío");
+  }
+
+  const fd = new FormData();
+  fd.append("email", email);
+  fd.append("session_id", String(currentSession?.id || ""));
+  fd.append("file", blob, `informe_completo_${currentSession?.id || "sesion"}.pdf`);
+
+  const res = await fetch(`${API}/email/session-report`, {
+    method: "POST",
+    body: fd
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+}
+
+
+// ---------- Envío masivo ----------
+async function emailReportToAllDrivers() {
+  const participants = participantsCache || [];
+  if (!participants.length) return alert("No hay participantes.");
+
+  const emailsSent = new Set();
+  const errors = [];
+
+  for (const p of participants) {
+    try {
+      const driverId = p.driver_id || p.driverId || p.driver?.id;
+      const email = await getDriverEmailById(driverId);
+
+      if (!email || !email.includes("@")) continue;
+      if (emailsSent.has(email)) continue;
+
+      await sendFullReportPdfToEmail(email);
+      emailsSent.add(email);
+
+      await sleep(800); // anti-límites SMTP
+    } catch (e) {
+      errors.push({
+        driver: p?.driver_name || p?.driver_id,
+        error: String(e?.message || e)
+      });
+    }
+  }
+
+  alert(
+    `✅ Emails enviados: ${emailsSent.size}` +
+    (errors.length ? `\n⚠️ Fallos: ${errors.length}` : "")
+  );
+
+  if (errors.length) console.warn("Errores envío:", errors);
+}
+
+
+function getRacerNumber(p) {
+  const mode = document.getElementById("ranking-mode")?.value || "race";
+
+  // 🟢 CARRERA → NUMERO DE KART
+  if (mode === "race") {
+    return p?.kart_number ?? p?.driver_number ?? "-";
+  }
+
+  // 🟡 QUALY → NUMERO DE PILOTO
+  return p?.driver_number ?? p?.kart_number ?? "-";
+}
+
+
+
+
+function getRacerCategory(r) {
+  return r.driver_category || r.category || "-";
+}
+
+function loadPenaltyDrivers(participants) {
+  const sel = document.getElementById("penaltyDriver");
+  sel.innerHTML = "";
+
+  participants.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+}
+function setActiveLedButton(btn) {
+  if (!btn) return;
+
+  // quitar activo a todos los botones LED
+  document.querySelectorAll(".btn.flag").forEach(b => {
+    b.classList.remove("active");
+  });
+
+  // activar el pulsado
+  btn.classList.add("active");
+}
+async function loadPenalties() {
+  const res = await fetch(
+    `/api/penalties?session_id=${currentSession.id}`
+  );
+  const penalties = await res.json();
+
+  const tbody = document.getElementById("penaltiesList");
+  tbody.innerHTML = "";
+
+  penalties.forEach(p => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${p.driver_name}</td>
+      <td>${p.type}</td>
+      <td>${p.seconds ?? p.points}</td>
+      <td>${p.reason ?? ""}</td>
+      <td>
+        <button onclick="deletePenalty(${p.id})">✖</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+
+
+
+
+// ===============================
+// ♻️ RESTAURACIÓN FINAL TRAS CARGA NO BORRAR NUNCA
+// ===============================
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadDriversAndKarts();
+  await loadSessions();
+
+  const lastId = getLastSelectedSession();
+
+  if (lastId) {
+    // Si existe, intentamos volver exactamente a tu sesión previa
+    const exists = sessions.some(s => Number(s.id) === Number(lastId));
+    if (exists) {
+      await selectSession(lastId);
+      return;
+    }
+  }
+
+  // SOLO si no hay nada guardado → elegimos la primera
+  if (sessions.length) {
+    await selectSession(sessions[0].id);
+  }
+});
+
+function normalizeLapTimes(lapTimes = []) {
+  return lapTimes
+    .map(l => {
+      if (typeof l === "number") {
+        return { ms: l, valid: l > 0 };
+      }
+      if (typeof l === "object" && typeof l.ms === "number") {
+        return { ms: l.ms, valid: l.valid !== false };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+document.addEventListener("change", e => {
+  if (e.target.matches("[data-pdf-col]")) {
+    syncPdfColumnsFromUI();
+  }
+});
+
+
+// ===============================
+// 🏆 ENVIAR / RECALCULAR CAMPEONATO
+// ===============================
+
+
+const sendBtn = document.getElementById("sendToChampionshipBtn");
+
+async function importSessionToChampionship() {
+  if (!currentSession) {
+    alert("No hay sesión seleccionada");
+    return;
+  }
+
+  try {
+    // 1️⃣ obtener carreras del campeonato
+    const r = await fetch(`${API}/championships/1/races`);
+    if (!r.ok) {
+      throw new Error("No se pudieron obtener carreras");
+    }
+
+    const races = await r.json();
+
+    // 2️⃣ buscar carrera vinculada a esta sesión
+    const race = races.find(
+      x => Number(x.racecontrol_session_id) === Number(currentSession.id)
+    );
+
+    if (!race) {
+      alert("Esta sesión no está vinculada a ninguna carrera de campeonato");
+      return;
+    }
+
+    console.log("Importando a carrera:", race.id, "sesión:", currentSession.id);
+
+    // 3️⃣ llamar bridge import-results
+    const url = `${API}/championships/1/races/${race.id}/import-results`;
+    console.log("POST", url);
+
+    const r2 = await fetch(url, { method: "POST" });
+
+    // ⚠️ manejar 404/HTML antes de json()
+    if (!r2.ok) {
+      const text = await r2.text();
+      console.error("Import HTTP error:", r2.status, text);
+      alert("Error importando resultados (" + r2.status + ")");
+      return;
+    }
+
+    const data = await r2.json();
+
+    alert(`Resultados enviados al campeonato (${data.imported} pilotos)`);
+
+  } catch (err) {
+    console.error("Import error:", err);
+    alert("Error enviando resultados al campeonato");
+  }
+}
+
+
+// ===== CronoLed  =====
+let lastLedBtn = null;
+
+function setLedActiveButton(btn){
+  if (lastLedBtn) lastLedBtn.classList.remove("active-led");
+  if (btn) btn.classList.add("active-led");
+  lastLedBtn = btn;
+}
+
+function ledSendPro(pro, btn) {
+
+  // ✅ Si viene desde AUTO (sin btn), buscamos el botón correcto
+  if (!btn) {
+    const labelMap = {
+      10: "OF",
+      29: "ALQUILER",
+      33: "JUNIOR",
+      17: "2V",
+      18: "1V",
+      11: "CUADROS",
+      16: "ROJO",
+      20: "VERDE",
+      19: "ATENCION SALIDA"
+    };
+
+    const label = labelMap[Number(pro)];
+    if (label) {
+      btn = [...document.querySelectorAll(".btn.flag")]
+        .find(b => b.textContent.trim().toUpperCase() === label);
+    }
+  }
+
+  // ===== 1) TOGGLE VISUAL BOTONES =====
+  document.querySelectorAll(".btn.flag").forEach(b => b.classList.remove("active-led"));
+  if (btn) btn.classList.add("active-led");
+
+  // ===== 2) MOSTRAR NOMBRE EN BADGE + COLOR =====
+  const flagBadge = document.getElementById("badge-flag");
+
+  if (flagBadge && btn) {
+    const nombre = btn.textContent.trim().toUpperCase();
+    flagBadge.textContent = "Bandera: " + nombre;
+
+    flagBadge.className = "badge";
+
+    const col = nombre.toLowerCase();
+    if (col.includes("rojo")) flagBadge.classList.add("flag-red");
+    else if (col.includes("verde")) flagBadge.classList.add("flag-green");
+    else if (col.includes("atencion") || col.includes("amarillo"))
+      flagBadge.classList.add("flag-yellow");
+    else if (col.includes("cuadros") || col.includes("check"))
+      flagBadge.classList.add("flag-checkered");
+  }
+
+  // ===== 3) ENVIAR AL BACKEND =====
+  fetch("/api/led", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pro: Number(pro) })
+  }).catch(console.error);
+}
+function restorePrintOptions(){
+
+  const saved = localStorage.getItem("racecontrol_print_options");
+  if(!saved) return;
+
+  const state = JSON.parse(saved);
+
+  document.querySelectorAll('#print-options input[type="checkbox"]')
+    .forEach(cb => {
+
+      if(state.hasOwnProperty(cb.dataset.pdfCol)){
+        cb.checked = state[cb.dataset.pdfCol];
+      }
+
+    });
+}
+async function getDriverEmailById(driverId) {
+  if (!driverId) return null;
+  try {
+    const r = await fetch(`${API}/drivers/${driverId}`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    return (d.email || "").trim() || null;
+  } catch {
+    return null;
+  }
+}
+checkAutoFinishByLaps();
+restorePrintOptions();
+loadAutoConfig();
+bindAutoUI();
+syncPostFinishSafetyInput();
+
+async function refreshRaceControlData(){
+  // recarga parrilla + live
+  await loadParticipants();
+  await loadLiveExtended?.().catch(()=>{});
+  renderParticipants?.();
+  renderLiveFromLatest?.();
+  renderLapByLap?.();
+}
+
+async function reloadKartsCache(){
+  try{
+    const res = await fetch(`${API}/karts`);
+    if(res.ok) karts = await res.json();
+  }catch{}
+}
+
+// 🚫 avería: anula el kart y lo quita de la sesión (backend ya lo hace)
+async function markKartBroken(kartId, kartNumber, participantId){
+  if(!kartId) return;
+  const reason = prompt(`Motivo avería kart #${kartNumber || kartId}:`, "Avería en pista");
+  if(reason === null) return;
+
+  try{
+    const res = await fetch(`${API}/karts/${kartId}/disable`, {
+      method:"PUT",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ reason })
+    });
+
+    if(!res.ok) throw new Error(await res.text());
+
+    showRCTOAST(
+      "🚫 KART ANULADO",
+      `Kart <b>#${kartNumber || kartId}</b> fuera de servicio.<br>
+      Se ha quitado automáticamente de la sesión.`
+    );
+
+    await reloadKartsCache();
+    await refreshRaceControlData();
+
+  }catch(e){
+    alert(String(e?.message || e));
+  }
+}
+
+// ✅ ok: reactiva y restaura asignaciones si procede (backend lo hace)
+async function markKartRepaired(kartId, kartNumber){
+  if(!kartId) return;
+  if(!confirm(`¿Reactivar kart #${kartNumber || kartId}?`)) return;
+
+  try{
+    const res = await fetch(`${API}/karts/${kartId}/enable`, { method:"PUT" });
+    if(!res.ok) throw new Error(await res.text());
+
+    showRCTOAST(
+      "✅ KART REACTIVADO",
+      `Kart <b>#${kartNumber || kartId}</b> vuelve a servicio.<br>
+      Si estaba asignado antes, el sistema intenta restaurarlo automáticamente.`
+    );
+
+    await reloadKartsCache();
+    await refreshRaceControlData();
+
+  }catch(e){
+    alert(String(e?.message || e));
+  }
+}
+
+let __disabledPollTimer = null;
+let __knownDisabled = new Set();
+
+async function pollDisabledKartsIfRunning(){
+  if(!currentSession || currentSession.status !== "running") return;
+
+  // karts usados actualmente en parrilla
+  const inUse = new Set(
+    (participantsCache || [])
+      .map(p => Number(p.kart_id))
+      .filter(x => Number.isFinite(x) && x > 0)
+  );
+
+  if(!inUse.size) return;
+
+  await reloadKartsCache();
+  const disabledNow = new Set(
+    karts.filter(k => k.is_disabled).map(k => Number(k.id))
+  );
+
+  // detectar nuevos disables de karts en uso
+  const newly = [];
+  for (const kid of disabledNow){
+    if(inUse.has(kid) && !__knownDisabled.has(kid)){
+      const k = karts.find(x => Number(x.id) === kid);
+      newly.push(k);
+    }
+  }
+
+  // actualizar known
+  __knownDisabled = disabledNow;
+
+  if(newly.length){
+    showRCTOAST(
+      "⚠️ AVERÍA DETECTADA",
+      newly.map(k => `Kart <b>#${k.number}</b> ha sido anulado desde otro panel.`).join("<br>")
+      + "<br><br>Recargando parrilla..."
+    );
+    await refreshRaceControlData();
+  }
+}
+
+function startDisabledKartsWatcher(){
+  if(__disabledPollTimer) clearInterval(__disabledPollTimer);
+  __disabledPollTimer = setInterval(() => {
+    pollDisabledKartsIfRunning().catch(()=>{});
+  }, 3000);
+}
+startDisabledKartsWatcher();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

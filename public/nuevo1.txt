@@ -1,0 +1,1493 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Race Control Pro</title>
+
+  <style>
+    :root { font-family: system-ui, sans-serif; color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:#020617; color:#e5e7eb; }
+
+    /* HEADER */
+    .header-pro {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:12px 20px; background:#020617; border-bottom:1px solid #1f2937;
+      gap: 12px;
+    }
+    .header-left { display:flex; flex-direction:column; gap:4px; min-width: 260px; }
+    .title { font-size:0.8rem; color:#9ca3af; letter-spacing:0.15em; }
+    .session-name { font-size:1.15rem; font-weight:600; }
+
+    .badges { display:flex; gap:0.35rem; flex-wrap:wrap; font-size:0.75rem; }
+    .badge {
+      border-radius:999px; border:1px solid #374151;
+      padding:0.15rem 0.6rem; background:#020617;
+    }
+    .badge.flag-green{border-color:#22c55e;color:#bbf7d0;}
+    .badge.flag-yellow{border-color:#eab308;color:#facc15;}
+    .badge.flag-red{border-color:#ef4444;color:#fecaca;}
+    .badge.flag-checkered{border-color:#e5e7eb;}
+
+    .header-center { display:flex; flex-direction:column; gap:6px; align-items:center; min-width: 320px; }
+    .header-right { display:flex; align-items:center; gap:12px; }
+    #race-timer-header{
+      display:inline-block;
+      font-size:1.9rem;
+      font-weight:700;
+      color:#22c55e;
+      min-width:190px;
+      text-align:right;
+      white-space:nowrap;
+      font-family:"Courier New", monospace;
+    }
+
+    select, input {
+      background:#020617; border-radius:999px; border:1px solid #4b5563;
+      color:#e5e7eb; padding:0.3rem 0.6rem; font-size:0.85rem;
+      outline: none;
+    }
+    input[type="number"]{ -moz-appearance: textfield; }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin:0; }
+
+    label { display:block; font-size:0.75rem; color:#9ca3af; margin: 10px 0 6px; }
+    .helper { font-size:0.75rem; color:#94a3b8; margin-top:6px; }
+
+    .btn-group{display:flex; gap:0.4rem; flex-wrap:wrap; justify-content:center;}
+    .btn {
+      border-radius:999px; border:1px solid #4b5563;
+      background:#111827; color:#e5e7eb; padding:0.35rem 0.9rem;
+      cursor:pointer; font-size:0.85rem;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.start{background:#22c55e;color:#111827;border-color:#22c55e;}
+    .btn.pause{background:#eab308;color:#111827;border-color:#eab308;}
+    .btn.finish{background:#ef4444;color:#111827;border-color:#ef4444;}
+
+    .icon-btn{font-size:2rem; cursor:pointer; padding:6px 10px; border-radius:10px;}
+    .icon-btn:hover{background:#1e293b;}
+
+    /* LIVE TIMING */
+    main{padding:1.25rem; display:grid; gap:1.25rem;}
+    .card{
+      background:#0f172a; border-radius:1rem; border:1px solid #1f2937;
+      padding:1.2rem;
+    }
+    .card-title{font-weight:700; margin-bottom: 6px;}
+    table{width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:0.6rem;}
+    th,td{padding:0.35rem 0.45rem; text-align:left;}
+    thead{background:#020617; border-bottom:1px solid #1f2937;}
+    th{font-size:0.7rem; color:#9ca3af; letter-spacing:0.12em;}
+    tbody tr:nth-child(odd){background:#020617;}
+    tbody tr:nth-child(even){background:#030712;}
+    tr.leader{box-shadow: inset 3px 0 0 #22c55e;}
+
+    .time-cell{font-variant-numeric:tabular-nums;}
+    .time-best-session{color:#22c55e; font-weight:700;}
+    .time-best-personal{color:#a855f7; font-weight:600;}
+    .time-slow{color:#facc15;}
+    .time-flash{animation:flashTime .5s;}
+    @keyframes flashTime{ 0%{background:rgba(250,204,21,0.4);} 100%{background:transparent;} }
+
+    /* PUNTO VERDE */
+    .finish-cell{width:24px;text-align:center;}
+    .finish-dot{width:10px;height:10px;border-radius:999px;background:#22c55e;opacity:0;margin:auto;}
+    .finish-dot.active{opacity:1;animation:finishBlink .8s ease-out 2;}
+    @keyframes finishBlink{ 0%{transform:scale(1);opacity:1;} 50%{transform:scale(1.5);opacity:1;} 100%{transform:scale(1);opacity:0;} }
+
+    /* PANEL CASCO 🏎️ */
+    #panel-registros{
+      position:fixed; top:90px; right:20px; width:420px;
+      max-height:85vh; overflow:auto;
+      background:#0f172a; border:1px solid #1f2937; border-radius:12px;
+      padding:1rem; opacity:0; pointer-events:none; transition:.25s; z-index:9999;
+    }
+    #panel-registros.visible{opacity:1; pointer-events:auto;}
+    #panel-registros .drag-header{
+      padding:6px; background:#1e293b; border-radius:6px;
+      text-align:center; cursor:move; margin-bottom:10px; font-size:.75rem; color:#94a3b8;
+    }
+
+    /* Panel editor parrilla */
+    #grid-editor{
+      position:fixed;
+      top:110px;
+      right:460px;
+      width:360px;
+      max-width: calc(100vw - 40px);
+      background:#0f172a;
+      border:1px solid #1f2937;
+      border-radius:14px;
+      padding:14px 14px 12px;
+      z-index:10001;
+      display:none;
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    #grid-editor .row { display:flex; gap:8px; }
+    #grid-editor .row > div { flex:1; }
+    #grid-editor .top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    #grid-editor .close-x { cursor:pointer; font-size:1.2rem; padding:4px 8px; border-radius:10px; }
+    #grid-editor .close-x:hover{ background:#1e293b; }
+
+    /* PANEL VOZ 🔊 */
+    #voice-panel{
+      position:fixed; top:90px; right:460px; width:260px;
+      background:#0f172a; border:1px solid #1e293b; border-radius:12px;
+      padding:15px; display:none; z-index:9999;
+    }
+    #voice-panel h3{ margin:0 0 10px; font-size: 1rem; }
+
+    /* MENÚ CONTEXTUAL VUELTAS */
+    #edit-lap-menu{ position:fixed; display:none; z-index:100000; }
+
+    /* SUGGEST */
+    .suggest{
+      display:none;
+      margin-top:6px;
+      border:1px solid #1f2937;
+      border-radius:10px;
+      overflow:hidden;
+      background:#020617;
+    }
+    .suggest .item{
+      padding:8px 10px;
+      cursor:pointer;
+      font-size:0.85rem;
+      border-bottom:1px solid #0b1220;
+    }
+    .suggest .item:hover{ background:#111827; }
+    .suggest .item:last-child{ border-bottom:none; }
+
+    /* SEMÁFORO */
+    .countdown{
+      font-family: "Courier New", monospace;
+      font-size: 1.6rem;
+      padding: 8px 12px;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      background:#020617;
+      display:inline-block;
+      min-width: 110px;
+      text-align:center;
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="header-pro">
+  <div class="header-left">
+    <div class="title">RACE CONTROL PRO</div>
+    <div id="session-name" class="session-name">Sin sesión</div>
+
+    <div class="badges">
+      <span class="badge" id="badge-status">Estado: -</span>
+      <span class="badge" id="badge-flag">Bandera: -</span>
+      <span class="badge" id="badge-participants">Participantes: -</span>
+      <span class="badge" id="badge-leader">Líder: V 0</span>
+    </div>
+  </div>
+
+
+  <div class="header-center">
+    <select id="session-select" class="session-select"></select>
+
+    <select id="category-filter" onchange="applyCategoryFilter()">
+      <option value="all">Todas</option>
+      <option value="65">+65 kg</option>
+      <option value="75">+75 kg</option>
+      <option value="95">+95 kg</option>
+    </select>
+
+    <select id="ranking-mode" onchange="applyCategoryFilter()">
+      <option value="race">Modo Carrera</option>
+      <option value="qualy">Modo Qualy</option>
+    </select>
+
+    <div class="btn-group">
+      <button class="btn start" onclick="startRace()">Start</button>
+      <button class="btn pause" onclick="pauseRace()">Pause</button>
+      <button class="btn finish" onclick="finishRace()">Finish</button>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn flag" onclick="setFlag('green')">Verde</button>
+      <button class="btn flag" onclick="setFlag('yellow')">Amarilla</button>
+      <button class="btn flag" onclick="setFlag('red')">Roja</button>
+      <button class="btn flag" onclick="setFlag('checkered')">Cuadros</button>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div id="race-timer-header" class="timer-small">00:00:00.000</div>
+
+    <div class="icon-btn" onclick="togglePanel()" title="Inscripciones / Parrilla">🏎️</div>
+    <div class="icon-btn" onclick="toggleVoicePanel()" title="Ajustes de voz">🔊</div>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="card-title">Live Timing Pro</div>
+
+    <div class="pill-row">
+      <span><strong>Sesión:</strong> <span id="pill-session-id">-</span></span>
+      <span><strong>Karts:</strong> <span id="pill-karts">-</span></span>
+      <span><strong>Vueltas líder:</strong> <span id="pill-leader-laps">0</span></span>
+      <span><strong>Best lap:</strong> <span id="pill-best-lap">-</span></span>
+    </div>
+
+    <div class="field" style="margin-top:0.6rem;">
+      <label>Tiempo mínimo de vuelta (ms)</label>
+      <div style="display:flex;gap:0.4rem;align-items:center;">
+        <input id="min-lap-input" type="number" value="0" style="width:120px;">
+        <button class="btn" onclick="saveMinLap()">Guardar</button>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Pos</th>
+          <th>Kart</th>
+          <th>Piloto</th>
+          <th>Categoria</th>
+          <th>Vueltas</th>
+          <th>Última</th>
+          <th>Mejor</th>
+          <th>Total</th>
+          <th>GAP</th>
+          <th>DIFF</th>
+          <th>Media</th>
+          <th>Consist.</th>
+		  <th>Trasponder</th>
+        </tr>
+      </thead>
+      <tbody id="timing-body">
+        <tr><td colspan="13">Sin datos</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<!-- ===== Panel Inscripciones / Parrilla ===== -->
+<section class="card" id="panel-registros">
+  <div class="drag-header">🟦 Panel de parrilla — Arrastrar / F2 / Casco 🏎️</div>
+
+  <div class="card-title">Parrilla (entries)</div>
+
+  <table class="participants-table" style="margin-top:0.6rem;">
+    <thead>
+      <tr>
+        <th>Grid</th>
+        <th>Piloto</th>
+        <th>TR Piloto</th>
+        <th>Kart</th>
+        <th>TR Kart</th>
+        <th style="width:120px;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="participants-body">
+      <tr><td colspan="6">Sin participantes</td></tr>
+    </tbody>
+  </table>
+
+  <div class="helper">Añade un piloto/kart a la sesión y asigna su posición de salida (grid). Luego edita desde ⚙️.</div>
+
+  <!-- PILOTO -->
+  <div class="field">
+    <label>Piloto</label>
+    <input id="search-driver" class="small-input" type="text" placeholder="Buscar piloto...">
+    <div id="driver-suggest" class="suggest"></div>
+    <div class="helper" id="driver-picked">-- Sin piloto --</div>
+  </div>
+
+  <!-- KART -->
+  <div class="field">
+    <label>Kart</label>
+    <input id="search-kart" class="small-input" type="text" placeholder="Buscar kart...">
+    <div id="kart-suggest" class="suggest"></div>
+    <div class="helper" id="kart-picked">-- Sin kart --</div>
+  </div>
+
+  <div class="field">
+    <label>Posición de salida (Grid)</label>
+    <input id="grid-position" type="number" min="1" placeholder="Ej: 1">
+    <div class="helper">Si lo dejas vacío, entrará sin grid.</div>
+  </div>
+
+  <button id="add-entry-btn" class="btn" style="margin-top:0.7rem;" onclick="addEntryToGrid()">
+    Añadir a parrilla
+  </button>
+
+  <!-- SEMÁFORO LOCAL -->
+  <div style="margin-top:1.2rem;">
+    <div class="card-title">Semáforo local</div>
+    <div id="countdown" class="countdown">LISTO</div>
+    <div class="helper">Solo visual, no afecta al backend.</div>
+
+    <div style="margin-top:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+      <button class="btn" onclick="startCountdown(5)">5s</button>
+      <button class="btn" onclick="startCountdown(10)">10s</button>
+      <button class="btn" onclick="startCountdown(30)">30s</button>
+      <button class="btn" onclick="resetCountdown()">Reset</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Panel editor de parrilla (edición total) ===== -->
+<div id="grid-editor">
+  <div class="top">
+    <div>
+      <div class="card-title" style="margin:0;">Editar participante</div>
+      <div id="grid-editor-sub" class="helper" style="margin-top:2px;">—</div>
+    </div>
+    <div class="close-x" onclick="closeGridEditor()" title="Cerrar">✖</div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label>Grid</label>
+      <input id="edit-grid" type="number" min="1" placeholder="Ej: 1">
+    </div>
+    <div>
+      <label>Kart</label>
+      <select id="edit-kart"></select>
+    </div>
+  </div>
+
+  <label>Nombre visible (Piloto)</label>
+  <input id="edit-name" placeholder="Nombre mostrado en carrera">
+
+  <label>Transponder Piloto</label>
+  <input id="edit-transponder" placeholder="ID transponder piloto">
+
+  <div class="helper">Cambiar kart por avería: selecciona otro kart y guarda. No se borra la entry.</div>
+
+  <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+    <button class="btn" onclick="closeGridEditor()">Cancelar</button>
+    <button class="btn start" onclick="saveGridEdit()">Guardar</button>
+  </div>
+</div>
+
+<!-- ===== PANEL VOZ ===== -->
+<div id="voice-panel">
+  <h3>Ajustes de voz</h3>
+
+  <label style="margin-top:0;"><input type="checkbox" id="voice-enabled"> Activar voz</label>
+
+  <label>Modo</label>
+  <select id="voice-mode">
+    <option value="kart">Kart</option>
+    <option value="driver">Piloto</option>
+    <option value="both">Ambos</option>
+  </select>
+
+  <label>Velocidad</label>
+  <input type="range" id="voice-rate" min="0.5" max="1.5" step="0.1">
+
+  <label>Volumen</label>
+  <input type="range" id="voice-volume" min="0" max="1" step="0.1">
+</div>
+
+<!-- ===== MENÚ CONTEXTUAL VUELTAS ===== -->
+<div id="edit-lap-menu">
+  <div style="background:#020617;border:1px solid #4b5563;border-radius:8px;padding:6px;min-width:200px;">
+    <button class="btn" style="width:100%;margin-bottom:4px;" onclick="editLapFromTiming()">✏ Editar tiempo</button>
+    <button class="btn" style="width:100%;background:#ef4444;border-color:#ef4444;" onclick="deleteLapFromTiming()">🗑 Borrar vuelta</button>
+  </div>
+</div>
+
+<!-- ===== PANEL HISTORIAL DE VUELTAS ===== -->
+<section id="laps-panel" class="card" style="position:fixed; top:70px; left:20px; width:420px; max-height:80vh; overflow:auto; z-index:9998; display:none;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+    <div class="card-title">Historial de vueltas</div>
+    <button class="btn" onclick="closeLapsPanel()">Cerrar</button>
+  </div>
+
+  <div id="laps-panel-header" class="helper">Piloto / Kart</div>
+
+  <table class="participants-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Tiempo</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="laps-panel-body">
+      <tr><td colspan="3" class="muted">Sin vueltas</td></tr>
+    </tbody>
+  </table>
+</section>
+<script src="http://localhost:4000/socket.io/socket.io.js"></script>
+
+<script>
+// ================= SOCKET.IO =================
+const socket = io("http://localhost:4000");
+
+socket.on("connect", () => {
+  console.log("🟢 Socket.IO conectado", socket.id);
+});
+
+socket.on("disconnect", () => {
+  console.log("🔴 Socket.IO desconectado");
+});
+
+// 🏁 LAP EN TIEMPO REAL
+socket.on("lap", lap => {
+  if (!latestLiveData) {
+    latestLiveData = { classification: [], bestLapTime: null };
+  }
+
+  // 🔑 Resolver participante por transponder
+  const participant = participantsCache.find(p => {
+    const activeTR = p.kart_id
+      ? p.kart_transponder
+      : p.driver_transponder;
+    return activeTR && String(activeTR) === String(lap.transponder);
+  });
+
+  if (!participant) {
+    console.warn("⚠ Lap recibido con transponder no asignado:", lap.transponder);
+    return;
+  }
+
+  const participantId = participant.id;
+
+  let row = latestLiveData.classification.find(
+    r => r.participant_id === participantId
+  );
+
+  if (!row) {
+    row = {
+      participant_id: participantId,
+      lapcount: 0,
+      lastTime: null,
+      best: null,
+      time: 0
+    };
+    latestLiveData.classification.push(row);
+  }
+
+  row.lapcount = lap.lap_number;
+  row.lastTime = lap.lap_time_ms;
+  row.best = row.best == null
+    ? lap.lap_time_ms
+    : Math.min(row.best, lap.lap_time_ms);
+
+  row.time += lap.lap_time_ms;
+
+  if (
+    latestLiveData.bestLapTime == null ||
+    lap.lap_time_ms < latestLiveData.bestLapTime
+  ) {
+    latestLiveData.bestLapTime = lap.lap_time_ms;
+  }
+
+  renderLiveFromLatest();
+});
+
+
+
+
+
+  // ========= CONFIG =========
+  const API = "http://localhost:4000/api";
+
+  let sessions = [];
+  let currentSession = null;
+  let participantsCache = [];
+  let latestLiveData = null;
+
+  let raceTimerInterval = null;
+  let raceStartTime = null;
+
+  let countdownTimer = null;
+  let countdownRemaining = 0;
+
+  let minLapMs = 0;
+  let prevLapCounts = {};
+
+  let voiceEnabled = false;
+  let voiceMode = "kart";
+  let voiceRate = 1;
+  let voiceVolume = 1;
+
+  let editLapTarget = null;
+
+  // ===== Datos base =====
+  let drivers = [];
+  let karts = [];
+
+  // estado temporal inscripción
+  let pendingEntry = { driverId: null, kartId: null };
+
+  let editingGridEntry = null;
+
+
+
+  // ========= UTILIDADES =========
+  function formatMs(ms) {
+    if (ms == null || isNaN(ms)) return "-";
+    let total = Math.max(0, ms);
+    let h = Math.floor(total / 3600000);
+    total %= 3600000;
+    let m = Math.floor(total / 60000);
+    total %= 60000;
+    let s = Math.floor(total / 1000);
+    let ms2 = total % 1000;
+    return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")+"."+String(ms2).padStart(3,"0");
+  }
+
+  function formatLapMs(ms) {
+    if (ms == null || isNaN(ms)) return "-";
+    let total = Math.max(0, ms);
+    let m = Math.floor(total / 60000);
+    total %= 60000;
+    let s = Math.floor(total / 1000);
+    let ms2 = total % 1000;
+    if (m > 0) return m + ":" + String(s).padStart(2,"0") + "." + String(ms2).padStart(3,"0");
+    return s + "." + String(ms2).padStart(3,"0");
+  }
+
+  function safeText(v) {
+    if (v === null || v === undefined || v === "") return "-";
+    return v;
+  }
+
+  function show(el){ if (el) el.style.display = "block"; }
+  function hide(el){ if (el) el.style.display = "none"; }
+
+  function autoCategory(weight) {
+    if (!weight) return null;
+    if (weight < 75) return "65";
+    if (weight < 95) return "75";
+    return "95";
+  }
+
+  // ========= CARGA BASE =========
+  async function loadDriversAndKarts() {
+    try {
+      const [drRes, ktRes] = await Promise.all([ fetch(API + "/drivers"), fetch(API + "/karts") ]);
+      const drJson = await drRes.json();
+      const ktJson = await ktRes.json();
+
+      drivers = Array.isArray(drJson) ? drJson : (drJson.drivers || drJson.data || []);
+      karts   = Array.isArray(ktJson) ? ktJson : (ktJson.karts   || ktJson.data   || []);
+
+      // pill karts
+      const pillKarts = document.getElementById("pill-karts");
+      if (pillKarts) pillKarts.textContent = String(karts.length);
+
+      console.log("✔ Drivers:", drivers.length, "✔ Karts:", karts.length);
+    } catch (err) {
+      console.error("❌ Error cargando drivers/karts", err);
+    }
+  }
+
+  // ========= BUSCADOR PILOTOS =========
+  function searchDrivers(q) {
+    q = q.toLowerCase();
+    return drivers.filter(d => {
+      const name = (d.name || "").toLowerCase();
+      const lastname = (d.lastname || "").toLowerCase();
+      const number = d.number != null ? String(d.number) : "";
+      const nick = (d.nickname || "").toLowerCase();
+      const transponder = (d.transponder || "").toLowerCase();
+      return name.includes(q) || lastname.includes(q) || number.includes(q) || nick.includes(q) || transponder.includes(q);
+    });
+  }
+
+  function renderDriverResults(list) {
+    const box = document.getElementById("driver-suggest");
+    if (!box) return;
+    if (!list.length) {
+      box.innerHTML = '<div class="item muted">Sin resultados</div>';
+      show(box);
+      return;
+    }
+    box.innerHTML = list.slice(0, 10).map(d => `
+      <div class="item" data-id="${d.id}">
+        👤 ${d.name || ""}${d.lastname ? " " + d.lastname : ""}${d.number != null ? " · #" + d.number : ""}
+      </div>`).join("");
+    show(box);
+  }
+
+  function pickDriver(id) {
+    const d = drivers.find(x => Number(x.id) === Number(id));
+    if (!d) return;
+    pendingEntry.driverId = d.id;
+    document.getElementById("driver-picked").textContent = `${d.name || ""}${d.lastname ? " " + d.lastname : ""}`.trim() || "-- Piloto --";
+    document.getElementById("search-driver").value = "";
+    hide(document.getElementById("driver-suggest"));
+  }
+
+  document.getElementById("search-driver")?.addEventListener("input", e => {
+    const q = e.target.value.trim();
+    if (!q) return hide(document.getElementById("driver-suggest"));
+    renderDriverResults(searchDrivers(q));
+  });
+
+  document.getElementById("driver-suggest")?.addEventListener("click", e => {
+    const item = e.target.closest(".item");
+    if (!item) return;
+    pickDriver(Number(item.dataset.id));
+  });
+
+  // ========= BUSCADOR KARTS =========
+  function searchKarts(q) {
+    q = q.toLowerCase();
+    return karts.filter(k => {
+      const num = String(k.number ?? "");
+      const tr = (k.transponder || "").toLowerCase();
+      const brand = (k.brand || "").toLowerCase();
+      const model = (k.model || "").toLowerCase();
+      return num.includes(q) || tr.includes(q) || brand.includes(q) || model.includes(q);
+    });
+  }
+
+  function renderKartResults(list) {
+    const box = document.getElementById("kart-suggest");
+    if (!box) return;
+    if (!list.length) {
+      box.innerHTML = '<div class="item muted">Sin resultados</div>';
+      show(box);
+      return;
+    }
+    box.innerHTML = list.slice(0, 10).map(k => `
+      <div class="item" data-id="${k.id}">
+        🚗 Kart #${k.number}${k.transponder ? ` · ${k.transponder}` : ""}
+      </div>`).join("");
+    show(box);
+  }
+
+  function pickKart(id) {
+    const k = karts.find(x => Number(x.id) === Number(id));
+    if (!k) return;
+    pendingEntry.kartId = k.id;
+    document.getElementById("kart-picked").textContent = `Kart #${k.number}`;
+    document.getElementById("search-kart").value = "";
+    hide(document.getElementById("kart-suggest"));
+  }
+
+  document.getElementById("search-kart")?.addEventListener("input", e => {
+    const q = e.target.value.trim();
+    if (!q) return hide(document.getElementById("kart-suggest"));
+    renderKartResults(searchKarts(q));
+  });
+
+  document.getElementById("kart-suggest")?.addEventListener("click", e => {
+    const item = e.target.closest(".item");
+    if (!item) return;
+    pickKart(Number(item.dataset.id));
+  });
+
+  // ========= INSCRIBIR EN SESIÓN (con grid) =========
+  async function addEntryToGrid() {
+    if (!currentSession) return alert("Selecciona una sesión");
+    if (!pendingEntry.driverId && !pendingEntry.kartId) return alert("Selecciona piloto o kart");
+
+    const payload = {};
+    if (pendingEntry.driverId) payload.driver_id = pendingEntry.driverId;
+    if (pendingEntry.kartId) payload.kart_id = pendingEntry.kartId;
+
+    const gridPos = Number(document.getElementById("grid-position")?.value || 0);
+    if (gridPos > 0) payload.grid_position = gridPos;
+
+    try {
+      const res = await fetch(`${API}/race-control/session/${currentSession.id}/entries`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) return alert(await res.text());
+
+      pendingEntry = { driverId: null, kartId: null };
+      document.getElementById("driver-picked").textContent = "-- Sin piloto --";
+      document.getElementById("kart-picked").textContent = "-- Sin kart --";
+      document.getElementById("grid-position").value = "";
+
+      await loadParticipants();
+      await loadLiveExtended();
+    } catch (err) {
+      console.error("❌ Error inscribiendo", err);
+      alert("Error inscribiendo participante");
+    }
+  }
+
+  // ========= SESIONES =========
+  async function loadSessions() {
+    try {
+      const res = await fetch(API + "/sessions");
+      sessions = await res.json();
+
+      const sel = document.getElementById("session-select");
+      sel.innerHTML = "";
+
+      if (!sessions.length) {
+        sel.innerHTML = '<option value="">Sin sesiones</option>';
+        updateSessionHeader(null);
+        updateTimingTableExtended([], { bestLapTime:null });
+        return;
+      }
+
+      sessions.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = s.name ? `${s.name} (${s.status})` : `Sesión ${s.id}`;
+        sel.appendChild(opt);
+      });
+
+      sel.onchange = () => selectSession(Number(sel.value));
+
+      const running = sessions.find(s => s.status === "running");
+      await selectSession(running ? running.id : sessions[0].id);
+    } catch (err) {
+      console.error("Error cargando sesiones", err);
+    }
+  }
+
+  async function selectSession(id) {
+    try {
+      const res = await fetch(`${API}/sessions/${id}`);
+      if (!res.ok) return;
+      currentSession = await res.json();
+
+      updateSessionHeader(currentSession);
+      document.getElementById("pill-session-id").textContent = currentSession.id;
+
+      await loadParticipants();
+      await loadLiveExtended();
+
+      if (currentSession.status === "running") startRaceTimer();
+      else stopRaceTimer();
+    } catch (err) {
+      console.error("Error cargando sesión:", err);
+    }
+  }
+
+  function updateSessionHeader(session) {
+    const nameEl = document.getElementById("session-name");
+    const stBadge = document.getElementById("badge-status");
+    const flagBadge = document.getElementById("badge-flag");
+
+    if (!session) {
+      nameEl.textContent = "Sin sesión seleccionada";
+      stBadge.textContent = "Estado: -";
+      flagBadge.textContent = "Bandera: -";
+      flagBadge.className = "badge";
+      return;
+    }
+
+    nameEl.textContent = session.name || `Sesión ${session.id}`;
+    stBadge.textContent = "Estado: " + (session.status || "-");
+
+    const flag = session.flag || "NONE";
+    flagBadge.textContent = "Bandera: " + String(flag).toUpperCase();
+    flagBadge.className = "badge";
+    if (flag === "green") flagBadge.classList.add("flag-green");
+    if (flag === "yellow") flagBadge.classList.add("flag-yellow");
+    if (flag === "red") flagBadge.classList.add("flag-red");
+    if (flag === "checkered") flagBadge.classList.add("flag-checkered");
+  }
+
+  // ========= PARTICIPANTES =========
+  async function loadParticipants() {
+    if (!currentSession) return;
+
+    const res = await fetch(`${API}/race-control/session/${currentSession.id}/entries`);
+    if (!res.ok) return;
+
+    const list = await res.json();
+    participantsCache = Array.isArray(list) ? list : [];
+
+    const badge = document.getElementById("badge-participants");
+    if (badge) badge.textContent = "Participantes: " + participantsCache.length;
+
+    renderParticipantsPanel();
+  }
+
+  function renderParticipantsPanel() {
+    const body = document.getElementById("participants-body");
+    if (!body) return;
+
+    if (!participantsCache.length) {
+      body.innerHTML = '<tr><td colspan="6" class="muted">Sin participantes</td></tr>';
+      return;
+    }
+
+    const sorted = [...participantsCache].sort((a,b) => {
+      const ga = Number(a.grid_position || 9999);
+      const gb = Number(b.grid_position || 9999);
+      if (ga !== gb) return ga - gb;
+      return Number(a.id) - Number(b.id);
+    });
+
+    body.innerHTML = sorted.map(p => `
+      <tr>
+        <td>${p.grid_position ?? "-"}</td>
+        <td>${p.driver_name || "— SIN PILOTO —"}</td>
+        <td>${p.driver_transponder || "-"}</td>
+        <td>${p.kart_number != null ? "#" + p.kart_number : "— SIN KART —"}</td>
+        <td>${p.kart_transponder || "-"}</td>
+        <td>
+          <button class="btn" onclick="openGridEditor(${p.id})" title="Editar">⚙️</button>
+          <button class="btn" onclick="deleteEntry(${p.id})" title="Eliminar">🗑</button>
+		 
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  async function deleteEntry(id) {
+    if (!currentSession) return;
+    if (!confirm("¿Eliminar participante?")) return;
+
+    try {
+      const res = await fetch(`${API}/race-control/entries/${id}`, { method: "DELETE" });
+      if (!res.ok) return alert(await res.text());
+      await loadParticipants();
+      await loadLiveExtended();
+    } catch (err) {
+      console.error("Error borrando entry:", err);
+      alert("Error al borrar");
+    }
+  }
+
+  // ========= EDITOR PARRILLA (edición total) =========
+
+
+function openGridEditor(entryId) {
+  const p = participantsCache.find(x => x.id === entryId);
+  if (!p) return;
+
+  // 🔒 Normalizamos el objeto para evitar undefined
+  editingGridEntry = {
+    id: p.id,
+    driver_id: p.driver_id ?? null,
+    kart_id: p.kart_id ?? null,
+    grid_position: p.grid_position ?? null
+  };
+
+  // Campos visibles
+  document.getElementById("edit-name").value = p.driver_name || "";
+  document.getElementById("edit-transponder").value = p.driver_transponder || "";
+  document.getElementById("edit-grid").value = p.grid_position || "";
+
+ const sel = document.getElementById("edit-kart");
+
+// karts ocupados en la sesión (menos el actual)
+const usedKartIds = new Set(
+  participantsCache
+    .filter(e => e.kart_id != null && e.id !== p.id)
+    .map(e => Number(e.kart_id))
+);
+
+sel.innerHTML =
+  `<option value="">— SIN KART —</option>` +
+  karts
+    .filter(k => !usedKartIds.has(Number(k.id)) || Number(k.id) === Number(p.kart_id))
+    .map(k => `
+      <option value="${k.id}" ${Number(k.id) === Number(p.kart_id) ? "selected" : ""}>
+        Kart #${k.number}
+      </option>
+    `)
+    .join("");
+
+
+  document.getElementById("grid-editor").style.display = "block";
+}
+
+
+
+function closeGridEditor() {
+  editingGridEntry = null;
+  document.getElementById("grid-editor").style.display = "none";
+}
+
+async function saveGridEdit() {
+  if (!editingGridEntry) return;
+
+  const payload = {};
+
+  // ===== GRID =====
+  const gridInput = document.getElementById("edit-grid").value;
+  const gridPos = Number(gridInput);
+  if (!isNaN(gridPos) && gridPos > 0 && gridPos !== Number(editingGridEntry.grid_position)) {
+    payload.grid_position = gridPos;
+  }
+
+  // ===== KART =====
+  const kartValue = document.getElementById("edit-kart").value;
+  let kartChanged = false;
+  let newKartId = null;
+
+  if (kartValue !== "") {
+    newKartId = Number(kartValue);
+    if (!isNaN(newKartId) && newKartId !== Number(editingGridEntry.kart_id)) {
+      kartChanged = true;
+    }
+  }
+
+  // 🚨 NADA QUE GUARDAR
+  if (Object.keys(payload).length === 0 && !kartChanged) {
+    alert("No hay cambios para guardar");
+    return;
+  }
+
+  try {
+    // ===== GUARDAR GRID (si cambió) =====
+    if (Object.keys(payload).length > 0) {
+      const res = await fetch(
+        `${API}/race-control/entries/${editingGridEntry.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (!res.ok) {
+        alert(await res.text());
+        return;
+      }
+    }
+
+    // ===== CAMBIAR KART (si cambió) =====
+    if (kartChanged) {
+      const resKart = await fetch(
+        `${API}/race-control/entries/${editingGridEntry.id}/change-kart`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ new_kart_id: newKartId })
+        }
+      );
+
+      if (!resKart.ok) {
+        alert(await resKart.text());
+        return;
+      }
+    }
+
+    closeGridEditor();
+    await loadParticipants();
+    await loadLiveExtended();
+
+  } catch (err) {
+    console.error("❌ Error guardando edición de parrilla:", err);
+    alert("Error guardando cambios");
+  }
+}
+
+
+  // ========= LIVE EXTENDED 
+  function renderLiveFromLatest() {
+  if (!latestLiveData) return;
+
+  const classification = latestLiveData.classification || [];
+  const lapMap = {};
+  classification.forEach(r => lapMap[r.participant_id] = r);
+
+  let merged = participantsCache.map(p => {
+    const lap = lapMap[p.id] || {};
+    const weight = p.weight || p.driver_weight || null;
+    const cat = p.category || autoCategory(weight);
+return {
+  participant_id: p.id,
+  racerName: p.driver_name || "-",
+  racerNumber: p.kart_number != null ? p.kart_number : "-",
+  racerTransponder: (
+    p.kart_id
+      ? p.kart_transponder
+      : p.driver_transponder
+  ) || "-",
+  category: cat,
+  weight,
+  grid_position: p.grid_position,
+  lapcount: lap.lapcount || 0,
+  pos: lap.pos,
+  lastTime: lap.lastTime,
+  best: lap.best,
+  time: lap.time,
+  gap: lap.gap,
+  diff: lap.diff,
+  mean: lap.mean,
+  consistency: lap.consistency
+};
+  });
+
+  updateTimingTableExtended(merged, latestLiveData);
+}
+
+async function loadLiveExtended() {
+  // ⛔ NO salir silenciosamente
+  if (!currentSession) {
+    console.warn("⏳ loadLiveExtended: sesión aún no cargada");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/sessions/${currentSession.id}/live-extended`);
+    if (!res.ok) {
+      console.warn("⚠ live-extended sin respuesta OK");
+      return;
+    }
+
+    latestLiveData = await res.json();
+    renderLiveFromLatest();
+
+  } catch (err) {
+    console.error("❌ Error en loadLiveExtended:", err);
+  }
+}
+
+
+function updateTimingTableExtended(rows, meta) {
+  const body = document.getElementById("timing-body");
+  const leaderBadge = document.getElementById("badge-leader");
+  const pillLeaderLaps = document.getElementById("pill-leader-laps");
+  const pillBestLap = document.getElementById("pill-best-lap");
+
+  if (!rows || !rows.length) {
+    body.innerHTML = '<tr><td colspan="14">Sin datos</td></tr>';
+    leaderBadge.textContent = "Líder: V 0";
+    pillLeaderLaps.textContent = "0";
+    pillBestLap.textContent = "-";
+    return;
+  }
+
+  const bestSession = meta && meta.bestLapTime != null ? meta.bestLapTime : null;
+  const newPrevLapCounts = {};
+
+  const leaderByLaps = rows.reduce(
+    (acc, r) => (!acc || (r.lapcount || 0) > (acc.lapcount || 0)) ? r : acc,
+    null
+  );
+
+  if (leaderByLaps) {
+    leaderBadge.textContent = "Líder: V " + (leaderByLaps.lapcount || 0);
+    pillLeaderLaps.textContent = leaderByLaps.lapcount || 0;
+  } else {
+    leaderBadge.textContent = "Líder: V 0";
+    pillLeaderLaps.textContent = "0";
+  }
+
+  pillBestLap.textContent =
+    bestSession != null ? formatLapMs(bestSession) : "-";
+
+  body.innerHTML = rows.map(r => {
+    const participantId = r.participant_id;
+    const prevLap = prevLapCounts[participantId] || 0;
+    const hasNewLap = (r.lapcount || 0) > prevLap;
+
+    newPrevLapCounts[participantId] = r.lapcount || 0;
+
+    const finishDotClass = hasNewLap ? "finish-dot active" : "finish-dot";
+    const cat = r.category || autoCategory(r.weight);
+
+    return `
+      <tr class="${r.pos === 1 ? "leader" : ""}"
+          ondblclick="openLapsPanel(${participantId})">
+
+        <td class="finish-cell">
+          <span class="${finishDotClass}"></span>
+        </td>
+
+        <td>${r.pos || "-"}</td>
+        <td>${safeText(r.racerNumber)}</td>
+        <td>${safeText(r.racerName)}</td>
+        <td>${cat || "-"}</td>
+        <td>${r.lapcount || 0}</td>
+
+        <td>${r.lastTime != null ? formatLapMs(r.lastTime) : "-"}</td>
+        <td>${r.best != null ? formatLapMs(r.best) : "-"}</td>
+
+        <td class="time-cell">${r.time != null ? formatMs(r.time) : "-"}</td>
+        <td>${safeText(r.gap)}</td>
+        <td>${safeText(r.diff)}</td>
+        <td>${r.mean != null ? formatLapMs(r.mean) : "-"}</td>
+        <td>${r.consistency != null ? r.consistency.toFixed(1) + "%" : "-"}</td>
+        <td>${safeText(r.racerTransponder)}</td>
+
+      </tr>
+    `;
+  }).join("");
+
+  prevLapCounts = newPrevLapCounts;
+}
+
+
+  function applyCategoryFilter() {
+    renderLiveFromLatest();
+  }
+
+
+  // ========= VOZ =========
+  function maybeAnnounceLap(r) {
+    if (!voiceEnabled) return;
+    if (!("speechSynthesis" in window)) return;
+
+    const number = safeText(r.racerNumber);
+    const name = safeText(r.racerName);
+    const lap = r.lapcount || 0;
+
+    let text = "";
+    if (voiceMode === "kart") text = `Kart ${number}, vuelta ${lap}`;
+    else if (voiceMode === "driver") text = `Piloto ${name}, vuelta ${lap}`;
+    else text = `Kart ${number}, piloto ${name}, vuelta ${lap}`;
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "es-ES";
+    utter.rate = voiceRate;
+    utter.volume = voiceVolume;
+    window.speechSynthesis.speak(utter);
+  }
+
+  // ========= CONTROL DE CARRERA =========
+  async function startRace() {
+    if (!currentSession) return;
+    if (!confirm("¿Iniciar la sesión? El cronómetro se pondrá a cero.")) return;
+
+    const res = await fetch(`${API}/sessions/${currentSession.id}/start`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (data.reset_clock) raceStartTime = Date.now();
+    await selectSession(currentSession.id);
+  }
+
+  async function pauseRace() {
+    if (!currentSession) return;
+
+    // Intentamos endpoints típicos: /pause y /resume
+    if (currentSession.status === "running") {
+      if (!confirm("¿Pausar la sesión?")) return;
+      await fetch(`${API}/sessions/${currentSession.id}/pause`, { method: "POST" }).catch(()=>{});
+      stopRaceTimer();
+      await selectSession(currentSession.id);
+      return;
+    }
+
+    if (currentSession.status === "paused") {
+      await fetch(`${API}/sessions/${currentSession.id}/resume`, { method: "POST" }).catch(()=>{});
+      // si el backend no tiene /resume, selectSession igualmente refresca
+      await selectSession(currentSession.id);
+    }
+  }
+
+  async function finishRace() {
+    if (!currentSession) return;
+    if (!confirm("⚠ ¿Finalizar la sesión?")) return;
+
+    await fetch(`${API}/sessions/${currentSession.id}/finish`, { method: "POST" });
+    stopRaceTimer();
+    raceStartTime = null;
+    await selectSession(currentSession.id);
+  }
+
+  async function setFlag(flag) {
+    if (!currentSession) return;
+    await fetch(`${API}/sessions/${currentSession.id}/flag`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flag })
+    });
+    await selectSession(currentSession.id);
+  }
+
+  // ========= CRONÓMETRO LOCAL =========
+  function startRaceTimer() {
+    if (!currentSession) return;
+
+    const baseSec = Number(currentSession.elapsed_seconds || 0);
+    const isRunning = currentSession.status === "running";
+    let elapsedMs = baseSec * 1000;
+
+    if (isRunning && currentSession.started_at) {
+      const startedAtMs = new Date(currentSession.started_at).getTime();
+      const nowMs = Date.now();
+      if (!isNaN(startedAtMs)) elapsedMs += Math.max(0, nowMs - startedAtMs);
+    }
+
+    raceStartTime = Date.now() - elapsedMs;
+
+    stopRaceTimer();
+    raceTimerInterval = setInterval(updateRaceTimer, 100);
+    updateRaceTimer();
+  }
+
+  function stopRaceTimer() {
+    if (raceTimerInterval) clearInterval(raceTimerInterval);
+    raceTimerInterval = null;
+  }
+
+  function updateRaceTimer() {
+    if (!raceStartTime) return;
+    const diff = Date.now() - raceStartTime;
+    document.getElementById("race-timer-header").textContent = formatMs(diff);
+  }
+
+  // ========= SEMÁFORO LOCAL =========
+  function startCountdown(seconds) {
+    resetCountdown();
+    countdownRemaining = seconds;
+    const el = document.getElementById("countdown");
+    el.textContent = countdownRemaining;
+
+    countdownTimer = setInterval(() => {
+      countdownRemaining--;
+      if (countdownRemaining > 0) el.textContent = countdownRemaining;
+      else if (countdownRemaining === 0) el.textContent = "GO!";
+      else resetCountdown();
+    }, 1000);
+  }
+
+  function resetCountdown() {
+    const el = document.getElementById("countdown");
+    el.textContent = "LISTO";
+    countdownRemaining = 0;
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+
+  // ========= TIEMPO MÍNIMO VUELTA =========
+  function saveMinLap() {
+    const val = Number(document.getElementById("min-lap-input").value || 0);
+    minLapMs = val;
+    localStorage.setItem("minLapMs", String(val));
+    alert("Tiempo mínimo guardado: " + val + " ms");
+  }
+
+  // ========= CONFIG VOZ =========
+  function initVoiceConfig() {
+    const enabled = localStorage.getItem("voiceEnabled");
+    const mode = localStorage.getItem("voiceMode");
+    const rate = localStorage.getItem("voiceRate");
+    const volume = localStorage.getItem("voiceVolume");
+
+    voiceEnabled = enabled === "true";
+    voiceMode = mode || "kart";
+    voiceRate = rate ? Number(rate) : 1;
+    voiceVolume = volume ? Number(volume) : 1;
+
+    document.getElementById("voice-enabled").checked = voiceEnabled;
+    document.getElementById("voice-mode").value = voiceMode;
+    document.getElementById("voice-rate").value = voiceRate;
+    document.getElementById("voice-volume").value = voiceVolume;
+
+    document.getElementById("voice-enabled").addEventListener("change", e => {
+      voiceEnabled = e.target.checked;
+      localStorage.setItem("voiceEnabled", String(voiceEnabled));
+    });
+    document.getElementById("voice-mode").addEventListener("change", e => {
+      voiceMode = e.target.value;
+      localStorage.setItem("voiceMode", voiceMode);
+    });
+    document.getElementById("voice-rate").addEventListener("input", e => {
+      voiceRate = Number(e.target.value);
+      localStorage.setItem("voiceRate", String(voiceRate));
+    });
+    document.getElementById("voice-volume").addEventListener("input", e => {
+      voiceVolume = Number(e.target.value);
+      localStorage.setItem("voiceVolume", String(voiceVolume));
+    });
+  }
+
+  function toggleVoicePanel() {
+    const p = document.getElementById("voice-panel");
+    p.style.display = (p.style.display === "block") ? "none" : "block";
+  }
+
+  // ========= PANEL CASCO (F2 + drag) =========
+  const panel = document.getElementById("panel-registros");
+  let dragHeader = panel?.querySelector(".drag-header") || null;
+
+  function togglePanel() {
+    if (!panel) return;
+    panel.classList.toggle("visible");
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "F2") { e.preventDefault(); togglePanel(); }
+    if (e.key === "Escape") { closeGridEditor(); }
+  });
+
+  // Drag panel
+  let dragging = false, offX = 0, offY = 0;
+
+  dragHeader?.addEventListener("mousedown", (e) => {
+    dragging = true;
+    const rect = panel.getBoundingClientRect();
+    offX = e.clientX - rect.left;
+    offY = e.clientY - rect.top;
+    document.body.style.userSelect = "none";
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging || !panel) return;
+    panel.style.left = (e.clientX - offX) + "px";
+    panel.style.top = (e.clientY - offY) + "px";
+    panel.style.right = "auto";
+  });
+
+  document.addEventListener("mouseup", () => {
+    dragging = false;
+    document.body.style.userSelect = "auto";
+  });
+
+  // ========= MENÚ CONTEXTUAL VUELTAS =========
+  function openLapEditMenu(evt, cell) {
+    evt.preventDefault();
+    editLapTarget = cell;
+    const menu = document.getElementById("edit-lap-menu");
+    menu.style.left = evt.clientX + "px";
+    menu.style.top = evt.clientY + "px";
+    menu.style.display = "block";
+  }
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#edit-lap-menu")) {
+      document.getElementById("edit-lap-menu").style.display = "none";
+    }
+  });
+
+  async function deleteLapFromTiming() {
+    const cell = editLapTarget;
+    if (!cell || !currentSession) return;
+
+    const pid = Number(cell.dataset.participant);
+    const lapNumber = Number(cell.dataset.lapcount);
+
+    if (!confirm(`¿Borrar la vuelta ${lapNumber}?`)) return;
+
+    const res = await fetch(`${API}/sessions/${currentSession.id}/participants/${pid}/laps/${lapNumber}`, { method: "DELETE" });
+    if (!res.ok) return alert(await res.text());
+
+    document.getElementById("edit-lap-menu").style.display = "none";
+    await loadLiveExtended();
+    await loadLapsForParticipant(pid);
+  }
+
+  async function editLapFromTiming() {
+    const cell = editLapTarget;
+    if (!cell || !currentSession) return;
+
+    const pid = Number(cell.dataset.participant);
+    const lapNumber = Number(cell.dataset.lapcount);
+
+    const currentMs = (cell.dataset.ms !== undefined && cell.dataset.ms !== "") ? Number(cell.dataset.ms) : null;
+    const newMs = prompt("Nuevo tiempo de vuelta en milisegundos:", (currentMs != null && !isNaN(currentMs)) ? String(currentMs) : "");
+    if (newMs === null) return;
+
+    const val = Number(newMs);
+    if (isNaN(val) || val <= 0) return alert("Tiempo inválido");
+
+    const res = await fetch(`${API}/sessions/${currentSession.id}/participants/${pid}/laps/${lapNumber}`, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ lap_time_ms: val })
+    });
+    if (!res.ok) return alert(await res.text());
+
+    document.getElementById("edit-lap-menu").style.display = "none";
+    await loadLiveExtended();
+    await loadLapsForParticipant(pid);
+  }
+
+  // ========= HISTORIAL VUELTAS =========
+  async function openLapsPanel(pid) {
+    document.getElementById("laps-panel").style.display = "block";
+    await loadLapsForParticipant(pid);
+  }
+
+  function closeLapsPanel() {
+    document.getElementById("laps-panel").style.display = "none";
+  }
+
+  async function loadLapsForParticipant(pid) {
+    if (!currentSession) return;
+    const res = await fetch(`${API}/sessions/${currentSession.id}/participants/${pid}/laps`);
+    if (!res.ok) return;
+
+    const laps = await res.json();
+    const p = participantsCache.find(x => Number(x.id) === Number(pid));
+    const header = document.getElementById("laps-panel-header");
+    header.textContent = p ? `Piloto: ${p.driver_name || "-"} | Kart: ${p.kart_number != null ? "#" + p.kart_number : "-"}` : "Piloto / Kart";
+
+    const body = document.getElementById("laps-panel-body");
+    if (!laps.length) {
+      body.innerHTML = '<tr><td colspan="3" class="muted">Sin vueltas</td></tr>';
+      return;
+    }
+
+    body.innerHTML = laps.map(l => `
+      <tr>
+        <td>${l.lap_number}</td>
+        <td>${formatLapMs(l.lap_time_ms)}</td>
+        <td>
+          <button class="btn" style="padding:0.1rem 0.4rem;font-size:0.75rem;" onclick="editLapTime(${pid}, ${l.id}, ${l.lap_time_ms})">✏</button>
+          <button class="btn" style="padding:0.1rem 0.4rem;font-size:0.75rem;background:#ef4444;border-color:#ef4444;" onclick="deleteLap(${pid}, ${l.id})">🗑</button>
+        </td>
+      </tr>`).join("");
+  }
+
+  async function deleteLap(pid, lapId) {
+    if (!currentSession) return;
+    if (!confirm("¿Borrar esta vuelta?")) return;
+
+    const res = await fetch(`${API}/sessions/${currentSession.id}/participants/${pid}/laps/${lapId}`, { method:"DELETE" });
+    if (!res.ok) return alert(await res.text());
+
+    await loadLiveExtended();
+    await loadLapsForParticipant(pid);
+  }
+
+  async function editLapTime(pid, lapId, ms) {
+    if (!currentSession) return;
+    const newVal = prompt("Nuevo tiempo (ms):", ms);
+    if (newVal === null) return;
+
+    const n = Number(newVal);
+    if (isNaN(n) || n <= 0) return alert("Valor inválido");
+
+    const res = await fetch(`${API}/sessions/${currentSession.id}/participants/${pid}/laps/${lapId}`, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ lap_time_ms:n })
+    });
+    if (!res.ok) return alert(await res.text());
+
+    await loadLiveExtended();
+    await loadLapsForParticipant(pid);
+  }
+
+  // ========= INIT =========
+  (function initMinLap(){
+    const saved = Number(localStorage.getItem("minLapMs") || 0);
+    document.getElementById("min-lap-input").value = saved;
+    minLapMs = saved;
+  })();
+
+  initVoiceConfig();
+  loadDriversAndKarts();
+  loadSessions();
+
+  // refresco periódico del live
+  setInterval(loadLiveExtended, 2000);
+</script>
+
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Crear prueba / fecha</title>
+<style>
+body{background:#0b0f1a;color:white;font-family:Arial;}
+.container{padding:20px;max-width:900px;margin:auto;}
+.card{background:#0f1420;padding:20px;border-radius:12px;}
+label{display:block;margin-top:10px;}
+input{width:100%;padding:10px;border-radius:8px;background:#0b0f1a;color:white;border:1px solid #1e2330;}
+button{padding:10px 14px;border:none;border-radius:8px;cursor:pointer;}
+.primary{background:#2563eb;color:white;}
+.dark{background:#1f2937;color:white;}
+.muted{color:#9ca3af;font-size:12px;margin-top:6px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>➕ Crear prueba / fecha del campeonato</h2>
+
+<div class="card">
+  <button class="dark" onclick="goBack()">⬅️ Volver</button>
+
+  <label>Nombre de la prueba (ej: Fecha 1 - Karting X)</label>
+  <input id="roundName" placeholder="Ej: Fecha 1 - Karting X">
+
+  <label>Fecha</label>
+  <input id="roundDate" type="date">
+
+  <div class="muted">
+    Consejo: puedes dejar la fecha vacía y completarla luego desde la gestión del campeonato.
+  </div>
+
+  <button class="primary" style="margin-top:15px" onclick="saveRound()">
+    Guardar prueba
+  </button>
+</div>
+
+</div>
+
+<script>
+const API_BASE="http://localhost:4000/api";
+const params=new URLSearchParams(window.location.search);
+const champId=params.get("championshipId");
+
+function goBack(){
+  if(champId){
+    window.location=`championship_manage.html?championshipId=${champId}`;
+  }else{
+    window.location="championship_list.html";
+  }
+}
+
+async function saveRound(){
+  if(!champId){
+    alert("Falta championshipId en la URL");
+    return;
+  }
+
+  const name = (roundName.value || "").trim();
+  if(!name){
+    alert("Escribe el nombre de la prueba");
+    return;
+  }
+
+  const body = {
+    name,
+    round_date: roundDate.value || null
+  };
+
+  const r = await fetch(`${API_BASE}/championships/${champId}/rounds`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(body)
+  });
+
+  if(!r.ok){
+    const t = await r.text().catch(()=> "");
+    alert("No se pudo crear la prueba. " + t);
+    return;
+  }
+
+  window.location=`championship_manage.html?championshipId=${champId}`;
+}
+</script>
+</body>
+</html>

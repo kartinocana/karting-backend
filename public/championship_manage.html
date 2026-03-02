@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Campeonato · Pruebas / Fechas</title>
+
+  <style>
+    body{background:#0b0f1a;color:white;font-family:Arial;}
+    .container{max-width:1200px;margin:auto;padding:20px;}
+    .card{background:#0f1420;padding:20px;border-radius:12px;margin-bottom:20px;}
+    table{width:100%;border-collapse:collapse;}
+    th,td{padding:10px;border-bottom:1px solid #1e2330;text-align:left;}
+    tr:hover{background:#1a2233;cursor:pointer;}
+    .selected{background:#1e3a8a !important;}
+    .badge{padding:4px 8px;border-radius:8px;font-size:12px;}
+    .badge.gray{background:#374151;}
+    .badge.green{background:#059669;}
+    .badge.orange{background:#d97706;}
+    .badge.blue{background:#2563eb;}
+    button{padding:8px 14px;border:none;border-radius:8px;margin:4px;cursor:pointer;}
+    .primary{background:#2563eb;color:white;}
+    .success{background:#059669;color:white;}
+    .warning{background:#d97706;color:white;}
+    .danger{background:#dc2626;color:white;}
+    .dark{background:#1f2937;color:white;}
+    input[type="date"]{
+      background:#1e2330;color:white;border:none;padding:6px;border-radius:6px;
+    }
+    .muted{color:#9ca3af;font-size:12px;}
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <h2>🏁 Campeonato · Pruebas / Fechas</h2>
+
+  <button class="dark" onclick="window.location='championship_list.html'">
+    ⬅️ Volver a campeonatos
+  </button>
+
+  <div class="card">
+    <h3>Pruebas del campeonato</h3>
+    <div class="muted" style="margin-bottom:8px;">
+      Tip: arrastra filas para reordenar (solo en modo orden manual).
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+
+          <th style="cursor:pointer" onclick="toggleSortByDate()">
+            Fecha ⬍
+          </th>
+
+          <th>Sesiones</th>
+          <th>Resultados</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody id="roundTable"></tbody>
+    </table>
+
+    <button class="primary" onclick="goCreateRound()">
+      ➕ Crear nueva prueba
+    </button>
+
+    <button class="dark" onclick="setManualOrder()" id="manualOrderBtn" style="display:none">
+      ↩ Orden manual
+    </button>
+  </div>
+
+  <div class="card" id="actionsCard" style="display:none">
+    <h3>Acciones sobre la prueba seleccionada</h3>
+
+    <button class="primary" onclick="openSetup()">⚙ Configurar sesiones</button>
+    <button class="success" onclick="openEnroll()">👥 Inscripciones</button>
+    <button class="warning" onclick="openRace()">🏁 Disputar</button>
+    <button class="primary" onclick="openResults()">📊 Resultados</button>
+    <button class="danger" onclick="openPenalties()">⚠ Penalizaciones</button>
+  </div>
+
+</div>
+
+<script>
+  const API_BASE = "http://localhost:4000/api";
+  const params = new URLSearchParams(window.location.search);
+  const champId = params.get("championshipId");
+
+  let selectedRound = null;
+
+  // Orden:
+  // - modo manual: display_order (drag&drop guarda este orden)
+  // - modo fecha: solo ordena visualmente (drag&drop desactivado)
+  let sortMode = "manual"; // "manual" | "date"
+  let sortAsc = true;
+
+  let roundsCache = [];
+
+  // ============================
+  // CARGA RONDAS
+  // ============================
+  async function loadRounds() {
+    const r = await fetch(`${API_BASE}/championships/${champId}/rounds`);
+    roundsCache = await r.json();
+    await renderTable();
+  }
+
+  // ============================
+  // RENDER TABLA
+  // ============================
+  async function renderTable() {
+    const rounds = [...roundsCache];
+
+    if (sortMode === "manual") {
+      rounds.sort((a, b) => (Number(a.display_order) || 0) - (Number(b.display_order) || 0));
+      document.getElementById("manualOrderBtn").style.display = "none";
+    } else {
+      // ordenar por fecha (nulos al final)
+      rounds.sort((a, b) => {
+        const ad = a.round_date ? new Date(a.round_date).getTime() : null;
+        const bd = b.round_date ? new Date(b.round_date).getTime() : null;
+
+        if (ad == null && bd == null) return 0;
+        if (ad == null) return 1;
+        if (bd == null) return -1;
+
+        return sortAsc ? (ad - bd) : (bd - ad);
+      });
+      document.getElementById("manualOrderBtn").style.display = "inline-block";
+    }
+
+    const roundTable = document.getElementById("roundTable");
+    roundTable.innerHTML = "";
+
+    const races = await fetch(`${API_BASE}/championships/${champId}/races`)
+      .then(r => r.json())
+      .catch(() => []);
+
+    for (const round of rounds) {
+      const sessions = await fetch(`${API_BASE}/championships/${champId}/rounds/${round.id}/sessions`)
+        .then(r => r.json())
+        .catch(() => []);
+
+      const hasResults = races.some(r => r.round_id === round.id);
+
+      const tr = document.createElement("tr");
+      tr.dataset.id = round.id;                 // ✅ necesario para guardar orden
+      tr.dataset.roundId = round.id;
+
+      tr.innerHTML = `
+        <td>${escapeHtml(round.name)}</td>
+
+        <td>
+          <input type="date"
+            value="${round.round_date ? String(round.round_date).split("T")[0] : ""}"
+            onchange="updateDate(${round.id}, this.value)"
+            onclick="event.stopPropagation()"
+            ${sortMode !== "manual" ? "disabled" : ""}
+          >
+        </td>
+
+        <td>${sessions.length}</td>
+
+        <td>
+          ${hasResults
+            ? '<span class="badge green">Sí</span>'
+            : '<span class="badge gray">No</span>'}
+        </td>
+
+        <td>${getStatusBadge(sessions, hasResults)}</td>
+
+        <td>
+          <button class="dark" onclick="duplicateRound(event, ${round.id})">📄</button>
+
+          <button class="danger"
+            ${hasResults ? 'disabled style="opacity:.4;cursor:not-allowed"' : ""}
+            onclick="deleteRound(event, ${round.id}, ${hasResults})">
+            🗑
+          </button>
+        </td>
+      `;
+
+      tr.onclick = () => selectRound(round.id, tr);
+      roundTable.appendChild(tr);
+    }
+
+    // ✅ Activar drag&drop SOLO en modo manual
+    if (sortMode === "manual") enableDragAndDrop();
+  }
+
+  // ============================
+  // DRAG & DROP (ORDEN MANUAL)
+  // ============================
+  function enableDragAndDrop() {
+    let dragSrc = null;
+
+    document.querySelectorAll("#roundTable tr").forEach(row => {
+      row.draggable = true;
+
+      row.addEventListener("dragstart", () => {
+        dragSrc = row;
+        row.style.opacity = 0.5;
+      });
+
+      row.addEventListener("dragend", () => {
+        row.style.opacity = 1;
+      });
+
+      row.addEventListener("dragover", e => e.preventDefault());
+
+      row.addEventListener("drop", async e => {
+        e.preventDefault();
+        if (!dragSrc || dragSrc === row) return;
+
+        const tbody = document.getElementById("roundTable");
+        const rows = [...tbody.children];
+        const from = rows.indexOf(dragSrc);
+        const to = rows.indexOf(row);
+
+        tbody.insertBefore(dragSrc, to > from ? row.nextSibling : row);
+        await saveNewOrder();
+      });
+    });
+  }
+
+  async function saveNewOrder() {
+    const rows = [...document.getElementById("roundTable").children];
+
+    for (let i = 0; i < rows.length; i++) {
+      const id = rows[i].dataset.id;
+      if (!id) continue;
+
+      await fetch(`${API_BASE}/championships/${champId}/rounds/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_order: i })
+      });
+    }
+
+    await loadRounds();
+  }
+
+  // ============================
+  // ESTADO
+  // ============================
+  function getStatusBadge(sessions, hasResults) {
+    if (!sessions.length) return '<span class="badge gray">Sin configurar</span>';
+    if (sessions.length && !hasResults) return '<span class="badge orange">Lista para disputar</span>';
+    return '<span class="badge green">Finalizada</span>';
+  }
+
+  // ============================
+  // ORDENAR
+  // ============================
+  function toggleSortByDate() {
+    sortMode = "date";
+    sortAsc = !sortAsc;
+    renderTable();
+  }
+
+  function setManualOrder() {
+    sortMode = "manual";
+    renderTable();
+  }
+
+  // ============================
+  // SELECCIONAR
+  // ============================
+  function selectRound(id, row) {
+    selectedRound = id;
+
+    document.querySelectorAll("#roundTable tr").forEach(r => r.classList.remove("selected"));
+    row.classList.add("selected");
+
+    document.getElementById("actionsCard").style.display = "block";
+  }
+
+  // ============================
+  // EDITAR FECHA
+  // ============================
+  async function updateDate(id, newDate) {
+    await fetch(`${API_BASE}/championships/${champId}/rounds/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ round_date: newDate })
+    });
+
+    await loadRounds();
+  }
+
+  // ============================
+  // ELIMINAR
+  // ============================
+async function deleteRound(e, id, hasResults) {
+  e.stopPropagation();
+
+  if (hasResults) return alert("No se puede eliminar una prueba con resultados.");
+  if (!confirm("¿Eliminar esta prueba?")) return;
+
+  const resp = await fetch(`${API_BASE}/championships/${champId}/rounds/${id}`, {
+    method: "DELETE"
+  });
+
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => "");
+    console.error("DELETE round error:", txt);
+    return alert("No se pudo borrar la prueba.\n" + (txt || `HTTP ${resp.status}`));
+  }
+
+  await loadRounds();
+}
+  // ============================
+  // DUPLICAR
+  // ============================
+  async function duplicateRound(e, id) {
+    e.stopPropagation();
+
+    const original = roundsCache.find(r => r.id === id);
+    if (!original) return;
+
+    const newRound = await fetch(`${API_BASE}/championships/${champId}/rounds`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: original.name + " (Copia)",
+        round_date: original.round_date
+      })
+    }).then(r => r.json());
+
+    const sessions = await fetch(`${API_BASE}/championships/${champId}/rounds/${id}/sessions`)
+      .then(r => r.json());
+
+    for (const s of sessions) {
+      await fetch(`${API_BASE}/championships/${champId}/rounds/${newRound.id}/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: s.category,
+          session_type: s.session_type,
+          event_name: s.event_name,
+          racecontrol_session_id: null
+        })
+      });
+    }
+
+    await loadRounds();
+  }
+
+  // ============================
+  // REDIRECCIONES
+  // ============================
+  function goCreateRound() {
+    window.location = `championship_create.html?championshipId=${champId}`;
+  }
+  function openSetup() {
+    window.location = `championship_setup.html?championshipId=${champId}&roundId=${selectedRound}`;
+  }
+  function openEnroll() {
+    window.location = `championship_enroll.html?championshipId=${champId}&roundId=${selectedRound}`;
+  }
+  function openResults() {
+    window.location = `championship_results.html?championshipId=${champId}&roundId=${selectedRound}`;
+  }
+  function openPenalties() {
+    window.location = `championship_penalties_ui.html?championshipId=${champId}&roundId=${selectedRound}`;
+  }
+
+ 
+
+  async function openRace(){
+
+    if(!selectedRound) return alert("Selecciona una prueba");
+
+    try{
+
+      const r = await fetch(
+        `${API_BASE}/championships/${champId}/rounds/${selectedRound}/sessions/create-and-sync`,
+        {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({
+            category: "LIBRE",
+            visibleName: "Libres",     // ✅ requerido por tu backend
+            event_name: "Libres"       // ✅ opcional (compatibilidad)
+          })
+        }
+      );
+
+      if(!r.ok){
+        const t = await r.text();
+        console.error(t);
+        return alert("Error creando sesión: " + t);
+      }
+
+      const data = await r.json();
+
+      window.location =
+        `racecontrol.html?sessionId=${data.sessionId}&roundId=${selectedRound}`;
+
+    }catch(e){
+      console.error(e);
+      alert("Error inesperado");
+    }
+  }
+
+
+
+  // ============================
+  // UTILS
+  // ============================
+  function escapeHtml(str) {
+    return String(str ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  loadRounds();
+</script>
+</body>
+</html>

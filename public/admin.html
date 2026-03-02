@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Ultra RaceControl</title>
+  <link rel="stylesheet" href="ui.css" />
+</head>
+<body>
+
+<div id="wrapper">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">🏁 KARTING OCAÑA</div>
+
+<button class="nav-button active" data-section="section-overview">📊 Overview</button>
+<button class="nav-button" data-section="section-drivers">👤 Pilotos</button>
+<button class="nav-button" data-section="section-karts">🏎️ Karts</button>
+<button class="nav-button" data-section="section-sessions">⏱️ Sesiones</button>
+<button class="nav-button" data-section="section-timingpoints">🎯 Timing Points</button>
+<button class="nav-button" data-section="section-rankings">🏆 Rankings</button>
+<button class="nav-button" data-section="section-maintenance">🔧 Mantenimiento</button>
+
+<!-- GESTIÓN CAMPEONATO -->
+<button
+  class="nav-button nav-button-championship"
+  onclick="window.location.href='championship_list.html'"
+>
+  🏆 Gestión de Campeonato
+</button>
+
+<!-- RACECONTROL -->
+<a
+  href="/racecontrol.html"
+  class="nav-button nav-button-racecontrol"
+>
+  ⚡ RaceControl Pro
+</a>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-area">
+    <header>
+      <h2>Dashboard</h2>
+    </header>
+
+    <!-- ========== OVERVIEW ========== -->
+    <section id="section-overview" class="section active">
+      <div class="grid grid-3">
+        <div class="card">
+          <h3 class="card-title">Pilotos registrados</h3>
+          <p id="overview-drivers-count">0</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Karts registrados</h3>
+          <p id="overview-karts-count">0</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Sesiones en curso</h3>
+          <p id="overview-running-count">0</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Sesiones finalizadas hoy</h3>
+        <p id="overview-finished-today">0</p>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Ranking diario (mejor vuelta)</h3>
+        <table class="table-crud table-rankings">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Piloto</th>
+              <th>Mejor vuelta</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-daily-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+
+
+  <!-- ========== DRIVERS / PILOTOS ========== -->
+<section id="section-drivers" class="section">
+
+  <!-- 🔥 CSV SOLO PARA PILOTOS -->
+  <div style="margin-bottom:10px; display:flex; gap:8px;">
+    <button class="btn btn-sm" id="btn-export-drivers">
+      Exportar CSV
+    </button>
+
+    <label class="btn btn-sm">
+      Importar CSV
+      <input
+        type="file"
+        id="input-import-drivers"
+        accept=".csv"
+        hidden
+      />
+    </label>
+	<button class="btn btn-sm btn-secondary" id="btn-manage-levels">
+  ⚙️ Niveles
+</button>
+
+  </div>
+<div style="display:flex; gap:10px; margin-bottom:10px;">
+  <label class="muted">Filtrar por nivel:</label>
+  <select id="filter-driver-level">
+    <option value="">Todos</option>
+  </select>
+</div>
+
+  <!-- FORMULARIO -->
+  <div class="card">
+    <h3 class="card-title">Nuevo / Editar piloto</h3>
+
+    <form id="form-driver" class="grid grid-3">
+
+      <!-- Nombre -->
+      <div>
+        <label>Nombre</label>
+        <input id="driver-name" required />
+      </div>
+
+      <!-- Email -->
+      <div>
+        <label>Correo electrónico</label>
+        <input
+          id="driver-email"
+          type="email"
+          placeholder="nombre@dominio.com"
+          required
+        />
+      </div>
+
+      <!-- Numero / Apellido -->
+      <div>
+        <label>Numero</label>
+        <input id="driver-lastname" />
+      </div>
+
+      <!-- Nickname -->
+      <div>
+        <label>Nickname</label>
+        <input id="driver-nickname" />
+      </div>
+
+      <!-- DNI -->
+      <div>
+        <label>DNI</label>
+        <input id="driver-dni" />
+      </div>
+
+      <!-- NIVEL -->
+      <div>
+        <label>Categorias</label>
+        <select id="driver-skill">
+          <option value="">-</option>
+          <option value="rookie">Rookie</option>
+          <option value="amateur">Amateur</option>
+          <option value="pro">Pro</option>
+        </select>
+      </div>
+
+      <!-- PESO -->
+      <div>
+        <label>Peso(kg)</label>
+        <input id="driver-weight" type="number" min="30" max="150" />
+      </div>
+
+      <!-- TRANSPONDER -->
+      <div>
+        <label>Transponder</label>
+        <input id="driver-transp" />
+      </div>
+
+      <!-- BOTÓN -->
+      <div style="grid-column:1 / -1; text-align:right;">
+        <button type="submit" class="btn btn-primary">
+          Guardar
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- LISTADO -->
+  <div class="card">
+    <h3 class="card-title">Listado</h3>
+
+    <table class="table-crud table-pilotos">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Nivel</th>
+          <th>Peso categoría</th>
+          <th>Transponder</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="drivers-table-body"></tbody>
+    </table>
+  </div>
+
+</section>
+
+
+    <!-- ========== KARTS ========== -->
+    <section id="section-karts" class="section">
+      <div class="card">
+        <h3 class="card-title">Nuevo kart</h3>
+        <form id="form-kart" class="grid grid-3">
+          <div>
+            <label>Número</label>
+            <input id="kart-number" required />
+          </div>
+          <div>
+            <label>Transponder</label>
+            <input id="kart-transp" />
+          </div>
+          <div>
+            <label>Notas</label>
+            <input id="kart-notes" />
+          </div>
+          <div style="grid-column:1 / -1; text-align:right;">
+            <button class="btn btn-primary" type="submit">Guardar</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Listado</h3>
+        <table class="table-crud table-karts">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Estado</th>
+              <th>Horas</th>
+              <th>Último servicio</th>
+              <th>Transponder</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="karts-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    
+<!-- ========== SESSIONS ========== -->
+<section id="section-sessions" class="section">
+
+  <!-- =========================
+       1) NUEVA / EDITAR SESIÓN + PARRILLA
+       ========================= -->
+  <div class="card">
+    <h3 class="card-title">Nueva / Editar sesión</h3>
+
+    <form id="form-session" class="grid grid-3">
+      <input id="session-id" type="hidden" />
+
+      <div>
+        <label>Nombre</label>
+        <input id="session-name" required />
+      </div>
+
+      <div>
+        <label>Tipo</label>
+        <select id="session-type">
+          <option value="practice">Practice</option>
+          <option value="qualy">Qualy</option>
+          <option value="race">Race</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Límite de vueltas</label>
+        <input id="session-lap-limit" type="number" />
+      </div>
+
+      <div>
+        <label>Límite de tiempo (seg)</label>
+        <input id="session-time-limit" type="number" />
+      </div>
+
+      <!-- BUSCADOR PILOTOS / KARTS -->
+      <div style="grid-column:1 / -1;">
+        <label>Añadir piloto a la parrilla</label>
+        <input
+          id="session-search"
+          placeholder="Buscar piloto o kart..."
+          autocomplete="off"
+        />
+        <div
+          id="session-search-results"
+          class="card"
+          style="margin-top:.5rem; display:none; max-height:200px; overflow:auto;"
+        ></div>
+      </div>
+
+      <!-- PARRILLA (MISMA TABLA, NO DUPLICADA) -->
+      <div style="grid-column:1 / -1;">
+        <h4>Parrilla configurada</h4>
+        <table class="table-crud">
+          <thead>
+            <tr>
+              <th style="width:80px;">Pos</th>
+              <th>Piloto</th>
+              <th>Kart</th>
+              <th>Transponder</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="grid-table-body">
+            <tr>
+              <td colspan="5" class="muted">
+                Añade pilotos a la parrilla
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="grid-column:1 / -1; text-align:right;">
+        <button type="button" class="btn" id="btn-session-reset">
+          Nuevo
+        </button>
+ <button type="submit" class="btn btn-primary">
+  Guardar sesión
+</button>
+
+
+      </div>
+    </form>
+  </div>
+
+  <!-- =========================
+       2) LISTADO DE SESIONES
+       ========================= -->
+  <div class="card">
+    <h3 class="card-title">Listado de sesiones</h3>
+
+    <table class="table-crud table-sessions">
+      <thead>
+          <tr>
+      <th>ID</th>
+      <th>Nombre</th>
+      <th>Tipo</th>
+      <th>Estado</th>
+      <th>Vueltas</th>
+      <th>Tiempo</th>
+      <th>Transponder</th>
+      <th>Acciones</th>
+    </tr>
+      </thead>
+      <tbody id="sessions-table-body"></tbody>
+    </table>
+  </div>
+
+</section>
+
+
+
+
+   <!-- ========== TIMING POINTS ========== -->
+<section id="section-timingpoints" class="section">
+  <div class="card">
+    <h3 class="card-title">Timing Points</h3>
+    <form id="form-tpoint" class="grid grid-3">
+      <input id="tp-id" type="hidden" />
+
+      <div>
+        <label>Nombre</label>
+        <input id="tp-name" required />
+      </div>
+
+      <div>
+        <label>Tipo</label>
+        <select id="tp-type">
+          <option value="finish">Finish</option>
+          <option value="split">Split</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Sector nº</label>
+        <input id="tp-sector" type="number" />
+      </div>
+
+      <div>
+        <label>Loop code</label>
+        <input id="tp-loop" />
+      </div>
+
+      <div>
+        <label>Protocolo</label>
+        <select id="tp-protocol">
+          <option value="HTTP_POST">HTTP_POST</option>
+          <option value="UDP">UDP</option>
+          <option value="TCP">TCP</option>
+          <option value="TCP_SSL">TCP_SSL</option>
+        </select>
+      </div>
+
+      <div>
+        <label>IP decoder</label>
+        <input id="tp-ip" />
+      </div>
+
+      <div>
+        <label>Puerto decoder</label>
+        <input id="tp-port" />
+      </div>
+
+      <div>
+        <label>Usuario HTTP</label>
+        <input id="tp-user" />
+      </div>
+
+      <div>
+        <label>Password HTTP</label>
+        <input id="tp-password" type="password" />
+      </div>
+
+      <div style="grid-column:1 / -1; text-align:right;">
+        <button type="button" class="btn" id="btn-tp-reset">Nuevo</button>
+        <button class="btn btn-primary" type="submit">Guardar</button>
+      </div>
+    </form>
+
+    <table class="table-crud table-timing">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th>Sector</th>
+          <th>Protocolo</th>
+          <th>Decoder</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tpoints-table-body"></tbody>
+    </table>
+  </div>
+</section>
+
+
+  
+
+
+    <!-- ========== RACE CONTROL ========== -->
+    <section id="section-racecontrol" class="section">
+      <div class="card">
+        <h3 class="card-title">Race Control (resumen)</h3>
+        <div style="margin-bottom:10px;">
+          <label>Sesión: </label>
+          <select id="racecontrol-session-select"></select>
+          <button class="btn" id="btn-race-refresh">Actualizar estado</button>
+        </div>
+        <pre id="racecontrol-state" style="background:#020617;padding:10px;border-radius:6px;max-height:260px;overflow:auto;"></pre>
+      </div>
+    </section>
+
+    <!-- ========== RANKINGS ========== -->
+    <section id="section-rankings" class="section">
+      <div class="card">
+        <h3 class="card-title">Ranking (mejores vueltas)</h3>
+        <div style="margin-bottom:10px;">
+          <button class="btn" id="btn-rankings-refresh">Recargar</button>
+          <button class="btn" id="btn-open-rankings2">Ver Rankings avanzados</button>
+        </div>
+        <table class="table-crud table-rankings">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Piloto</th>
+              <th>Sesión</th>
+              <th>Mejor vuelta</th>
+            </tr>
+          </thead>
+          <tbody id="rankings-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+   <!-- ========== MAINTENANCE ========== -->
+<section id="section-maintenance" class="section">
+  <div class="card">
+    <h3 class="card-title">Mantenimiento de karts</h3>
+
+    <!-- FORMULARIO NUEVA TAREA -->
+    <div class="grid grid-2" style="margin-bottom:1rem;">
+      <form id="form-maint-task" class="grid grid-3">
+        <div>
+          <label>Kart</label>
+          <select id="maint-task-kart" required></select>
+        </div>
+        <div>
+          <label>Regla / código (rule_id)</label>
+          <input id="maint-task-rule" type="number" placeholder="Opcional" />
+        </div>
+        <div style="align-self:end; text-align:right;">
+          <button type="submit" class="btn btn-primary">Crear tarea</button>
+        </div>
+
+        <p class="helper" style="grid-column:1 / -1;">
+          Crea una tarea manual para el kart seleccionado con estado <b>open</b>.
+        </p>
+      </form>
+
+      <!-- FILTROS / EXPORT -->
+      <div>
+        <label>Filtros de tareas</label>
+        <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem;">
+          <select id="maint-status-filter">
+            <option value="open">Abiertas</option>
+            <option value="all">Todas</option>
+            <option value="completed">Cerradas</option>
+          </select>
+          <button class="btn" id="btn-maint-refresh">Recargar</button>
+          <a class="btn" href="/api/maintenance/export/tasks" target="_blank">
+            Exportar CSV
+          </a>
+        </div>
+        <p class="helper">
+          En Google Sheets puedes usar:
+          <code>=IMPORTDATA("http://TU_IP_O_LOCALHOST:4000/api/maintenance/export/tasks")</code>
+          (cambia <code>TU_IP_O_LOCALHOST</code> por la IP real o <code>localhost</code>).
+        </p>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <!-- ESTADO DE KARTS -->
+      <div>
+        <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+          <h4 style="margin:0;">Estado de karts</h4>
+
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <label for="maint-kart-filter" class="muted" style="font-size:12px;">Kart</label>
+            <select id="maint-kart-filter">
+              <option value="">Todos</option>
+            </select>
+
+            <input
+              id="maint-search"
+              type="search"
+              placeholder="Buscar (#, transponder...)"
+              style="min-width:220px;"
+            />
+          </div>
+        </div>
+
+        <table class="table-crud">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Estado</th>
+              <th>Horas</th>
+              <th>Próx. servicio</th>
+              <th>Restantes</th>
+              <th>Últ. servicio</th>
+              <th>Margen</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="maint-karts-body"></tbody>
+        </table>
+      </div>
+
+      <!-- TAREAS -->
+      <div>
+        <h4>Tareas de mantenimiento</h4>
+        <table class="table-crud">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Kart</th>
+              <th>Regla</th>
+              <th>Estado</th>
+              <th>Creada</th>
+              <th>Cerrada</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="maint-tasks-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGLAS DE MANTENIMIENTO -->
+  <div class="card" style="margin-top:2rem;">
+    <h3 class="card-title">Reglas de mantenimiento</h3>
+
+    <!-- FORMULARIO REGLA NUEVA -->
+    <form id="rule-form" class="grid grid-3" style="margin-bottom:1rem;">
+      <div>
+        <label>Tipo</label>
+        <select id="rule-type" required>
+          <option value="hours">Horas</option>
+          <option value="laps">Vueltas</option>
+          <option value="days">Días</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Valor</label>
+        <input id="rule-value" type="number" required placeholder="Ej: 10" />
+      </div>
+
+      <div>
+        <label>Descripción</label>
+        <input id="rule-desc" type="text" placeholder="Ej: Cambio de aceite" />
+      </div>
+
+      <button class="btn btn-primary" type="submit">Crear regla</button>
+    </form>
+
+    <!-- LISTA DE REGLAS -->
+    <table class="table-crud">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Tipo</th>
+          <th>Valor</th>
+          <th>Descripción</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="rules-body"></tbody>
+    </table>
+  </div>
+
+  <!-- TRABAJOS DE TALLER (JOBS) -->
+  <div class="card" style="margin-top:2rem;">
+    <h3 class="card-title">Trabajos de taller</h3>
+
+    <form id="job-form" class="grid grid-3" style="margin-bottom:1rem;">
+      <div>
+        <label>Kart</label>
+        <select id="job-kart" required></select>
+      </div>
+      <div>
+        <label>Título</label>
+        <input id="job-title" type="text" placeholder="Ej: Servicio 10h" />
+      </div>
+      <div>
+        <label>Descripción</label>
+        <input id="job-desc" type="text" placeholder="Cambio aceite, filtros..." />
+      </div>
+      <button class="btn btn-primary" type="submit">Crear trabajo</button>
+    </form>
+
+    <table class="table-crud">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Kart</th>
+          <th>Título</th>
+          <th>Estado</th>
+          <th>Apertura</th>
+          <th>Cierre</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="jobs-body"></tbody>
+    </table>
+  </div>
+
+  <!-- HISTORIAL DE MANTENIMIENTO POR KART -->
+  <div id="maint-history-card" class="card" style="margin-top:2rem; display:none;">
+    <h3 class="card-title">
+      Historial de mantenimiento — Kart <span id="maint-history-kart-label"></span>
+    </h3>
+
+    <div class="grid grid-3">
+      <div>
+        <h4>Trabajos (jobs)</h4>
+        <table class="table-crud">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Título</th>
+              <th>Estado</th>
+              <th>Apertura</th>
+              <th>Cierre</th>
+            </tr>
+          </thead>
+          <tbody id="maint-history-jobs"></tbody>
+        </table>
+      </div>
+
+      <div>
+        <h4>Tareas</h4>
+        <table class="table-crud">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Regla</th>
+              <th>Estado</th>
+              <th>Creada</th>
+              <th>Cerrada</th>
+              <th>Job</th>
+            </tr>
+          </thead>
+          <tbody id="maint-history-tasks"></tbody>
+        </table>
+      </div>
+
+      <div>
+        <h4>Alertas</h4>
+        <table class="table-crud">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Regla</th>
+              <th>Fecha</th>
+              <th>Mensaje</th>
+            </tr>
+          </thead>
+          <tbody id="maint-history-alerts"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- =============================
+      HISTORIAL MODAL (Pilotos y Karts)
+     ============================= -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Historial de Pilotos</title>
+
+<!-- Estilos básicos -->
+<style>
+/* =============================
+   BASE
+   ============================= */
+body {
+  background:#000;
+  color:#fff;
+  font-family:Arial, sans-serif;
+  margin:0;
+}
+
+/* =============================
+   BOTONES
+   ============================= */
+.btn {
+  background:#222;
+  color:#fff;
+  border:1px solid #444;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  transition:background .2s, border .2s;
+}
+
+.btn:hover {
+  background:#2d2d2d;
+  border-color:#666;
+}
+
+.btn-sm {
+  font-size:12px;
+  padding:4px 8px;
+}
+
+.btn-warning {
+  background:#6a5200;
+  border-color:#a88000;
+}
+
+.btn-warning:hover {
+  background:#806300;
+}
+
+.btn-secondary {
+  background:#123b5c;
+  border-color:#1e6fa3;
+}
+
+.btn-secondary:hover {
+  background:#1a4e75;
+}
+
+/* =============================
+   MODALES
+   ============================= */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 9999;
+}
+
+.modal-content {
+  background: #0b1118;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 700px;
+  margin: 40px auto;
+}
+
+
+.close-btn {
+  float:right;
+  background:#b00;
+
+  border:none;
+  padding:5px 12px;
+  color:#fff;
+  font-weight:bold;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.close-btn:hover {
+  background:#d00;
+}
+
+/* =============================
+   TITULOS
+   ============================= */
+h1, h2, h3 {
+  color:#0af;
+  margin-top:0;
+}
+
+/* =============================
+   TABLAS (CLAVE)
+   ============================= */
+.data-table {
+  width:100%;
+  border-collapse:collapse;
+  margin-bottom:20px;
+}
+
+.data-table th,
+.data-table td {
+  border:1px solid #333;
+  padding:6px;
+  text-align:center;
+}
+
+.data-table th {
+  background:#1b2a3a;
+  color:#9fd3ff;
+  font-weight:bold;
+}
+
+.data-table td {
+  color:#fff;
+}
+
+.data-table tr:nth-child(even) td {
+  background:#0f1823;
+}
+
+.data-table tr:hover td {
+  background:#162233;
+}
+
+/* =============================
+   TABLAS CRUD (drivers, karts)
+   ============================= */
+.table-crud {
+  width:100%;
+  border-collapse:collapse;
+}
+
+.table-crud th,
+.table-crud td {
+  border:1px solid #333;
+  padding:8px;
+  text-align:center;
+  color:#fff;
+}
+
+.table-crud th {
+  background:#162433;
+  color:#9fd3ff;
+}
+
+.table-crud tr:nth-child(even) td {
+  background:#0f1823;
+}
+
+/* 🔥 ACCIONES — SIN PUNTOS SUSPENSIVOS */
+.table-crud td.actions {
+  white-space: normal;     /* permite varias líneas */
+  overflow: visible;       /* evita el "..." */
+  text-overflow: unset;
+  text-align: center;
+}
+
+.table-crud td.actions button {
+  margin: 2px;
+  display: inline-block;
+}
+
+/* =============================
+   TEXTO AUXILIAR
+   ============================= */
+.muted {
+  color:#aaa;
+  font-size:13px;
+}
+
+.error {
+  color:#f66;
+  font-weight:bold;
+}
+
+/* =============================
+   CARDS / SECCIONES
+   ============================= */
+.card {
+  background:#0b1118;
+  border-radius:10px;
+  padding:20px;
+  margin-bottom:20px;
+  box-shadow:0 0 15px rgba(0,0,0,.6);
+}
+
+.card-title {
+  color:#9fd3ff;
+  margin-top:0;
+}
+
+/* =============================
+   DASHBOARD INFO BOXES
+   ============================= */
+.dashboard-box {
+  background:#0f1823;
+  border:1px solid #1b2a3a;
+  border-radius:10px;
+  padding:15px;
+  text-align:center;
+  color:#9fd3ff;
+}
+
+/* =============================
+   INPUTS / FORMS
+   ============================= */
+input, select {
+  background:#111;
+  color:#fff;
+  border:1px solid #333;
+  padding:6px;
+  border-radius:6px;
+}
+
+input:focus, select:focus {
+  outline:none;
+  border-color:#0af;
+}
+
+/* =============================
+   CHARTS
+   ============================= */
+canvas {
+  background:#0b1118;
+  border-radius:8px;
+  padding:10px;
+}
+
+/* =============================
+   SCROLLBAR
+   ============================= */
+::-webkit-scrollbar {
+  width:10px;
+}
+
+::-webkit-scrollbar-track {
+  background:#05080c;
+}
+
+::-webkit-scrollbar-thumb {
+  background:#1b2a3a;
+  border-radius:10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background:#24415e;
+}
+#btn-manage-levels {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+#section-drivers > div:first-child {
+  position: relative;
+  z-index: 10;
+}
+
+.actions-cell {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(28px, 1fr));
+  gap: 6px;
+  justify-items: center;
+}
+
+/* Botón icono */
+.btn-icon {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  cursor: pointer;
+}
+
+.btn-icon:hover {
+  background: #1f2937;
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 110%;
+  background: #0f172a;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  min-width: 160px;
+  z-index: 1000;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+
+.dropdown-menu button {
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: #e5e7eb;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dropdown-menu button:hover {
+  background: #1e293b;
+}
+
+.dropdown-menu .danger {
+  color: #f87171;
+}
+.import-btn {
+  padding: 6px 12px;
+  background: #1e90ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.import-btn:hover {
+  background: #1877d5;
+}
+
+.import-btn.imported {
+  background: #2ecc71;
+  cursor: default;
+}
+
+
+</style>
+</head>
+
+<body>
+
+<!-- =============================
+     HISTORIAL MODAL
+============================= -->
+<div id="historyModal" class="modal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeHistoryModal()">X</button>
+
+    <h2 id="historyTitle"></h2>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0;">
+      <button class="btn btn-sm" onclick="exportDriverHistoryCSV()">Exportar vueltas (CSV)</button>
+      <button class="btn btn-sm" onclick="exportDriverSessionStatsCSV()">Exportar sesiones (CSV)</button>
+      <button class="btn btn-sm" onclick="downloadHistoryChartPNG()">Descargar gráfica (PNG)</button>
+      <button class="btn btn-sm" onclick="downloadDriverPDF()">Reporte PDF</button>
+    </div>
+
+    <h3>Resumen</h3>
+    <div id="historySummary"></div>
+
+    <h3>Evolución de vueltas</h3>
+    <canvas id="lapsChart" height="120"></canvas>
+
+    <h3>Sesiones</h3>
+    <table id="historySessions" class="data-table"></table>
+
+    <h3>Vuelta a vuelta</h3>
+    <table id="historyLaps" class="data-table"></table>
+  </div>
+</div>
+
+<!-- =============================
+     COMPARACIÓN MODAL
+============================= -->
+<div id="compareModal" class="modal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeCompareModal()">X</button>
+
+    <h2 id="compareTitle">Comparación de pilotos</h2>
+    <div id="compareSummary"></div>
+
+    <h3>Gráfica (última sesión común)</h3>
+    <canvas id="compareChart" height="120"></canvas>
+
+    <h3>Resumen</h3>
+    <table id="compareTable" class="data-table"></table>
+  </div>
+</div>
+
+<!-- =============================
+     RANKING MODAL
+============================= -->
+<div id="rankingModal" class="modal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeRankingModal()">X</button>
+
+    <h2>Ranking histórico (mejor vuelta)</h2>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0;">
+      <button class="btn btn-sm" onclick="buildRanking()">Recalcular ranking</button>
+      <button class="btn btn-sm" onclick="exportRankingCSV()">Exportar ranking (CSV)</button>
+    </div>
+
+    <div id="rankingStatus" style="margin-bottom:10px;"></div>
+    <table id="rankingTable" class="data-table"></table>
+  </div>
+</div>
+
+<!-- =============================
+     LIBRERÍAS
+============================= -->
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- PDF -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.29/dist/jspdf.plugin.autotable.min.js"></script>
+
+<!-- Lógica -->
+<script src="/socket.io/socket.io.js"></script>
+
+<script src="/admin-levels.js"></script>
+<script src="/admin.js"></script>
+
+
+<!-- =============================
+     MODAL: GESTIÓN DE NIVELES
+============================= -->
+<div id="levelsModal" class="modal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeLevelsModal()">X</button>
+
+    <h3>Gestión de niveles</h3>
+
+    <form id="level-form" onsubmit="return false;" style="display:flex; gap:8px; margin-bottom:10px;">
+      <input id="level-code" placeholder="Código (ej: rotax-mini)" />
+      <input id="level-name" placeholder="Nombre visible" />
+      <input id="level-color" type="color" value="#2563eb" />
+      <button class="btn btn-primary" type="button" onclick="createLevel()">Crear</button>
+    </form>
+
+    <table class="table-crud">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Color</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="levels-body"></tbody>
+    </table>
+  </div>
+</div>
+
+
+</body>
+</html>
+

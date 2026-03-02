@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Live Timing - Modo TV</title>
+
+<style>
+  :root {
+    color-scheme: dark;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #000;
+    color: #fff;
+    overflow: hidden;
+  }
+
+  header {
+    padding: 16px 24px;
+    background: #000;
+    border-bottom: 2px solid #111827;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .session-title {
+    font-size: 2.1rem;
+    font-weight: 700;
+  }
+
+  .session-sub {
+    font-size: 1rem;
+    color: #9ca3af;
+    margin-top: 4px;
+  }
+
+  .timer-box {
+    text-align: right;
+  }
+
+  .timer-label {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #9ca3af;
+  }
+
+  .timer {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #22c55e;
+  }
+
+  main {
+    padding: 8px 16px 16px 16px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6px;
+  }
+
+  thead {
+    background: #020617;
+  }
+
+  th {
+    padding: 6px 8px;
+    text-align: center;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #9ca3af;
+  }
+
+  tbody tr:nth-child(odd) { background: #020617; }
+  tbody tr:nth-child(even) { background: #030712; }
+
+  td {
+    padding: 6px 8px;
+    text-align: center;
+    font-size: 1.4rem;
+  }
+
+  /* Modos de visualización */
+  body[data-mode="normal"] td {
+    font-size: 1.4rem;
+  }
+  body[data-mode="compact"] td {
+    font-size: 1.1rem;
+    padding: 4px 6px;
+  }
+  body[data-mode="xl"] td {
+    font-size: 1.8rem;
+    padding: 8px 10px;
+  }
+
+  body[data-mode="compact"] th {
+    font-size: 0.8rem;
+  }
+  body[data-mode="xl"] th {
+    font-size: 1rem;
+  }
+
+  tr.leader {
+    background: #022c22 !important;
+    font-weight: 700;
+  }
+
+  .pos-col { width: 60px; }
+  .num-col { width: 80px; }
+  .cat-col { width: 110px; }
+  .laps-col { width: 70px; }
+  .finish-col { width: 40px; }
+
+  .time-cell {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .time-best-session {
+    color: #22c55e;
+    font-weight: 900;
+  }
+
+  .time-best-personal {
+    color: #a855f7;
+    font-weight: 700;
+  }
+
+  .time-slow {
+    color: #facc15;
+  }
+
+  .finish-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: #22c55e;
+    opacity: 0;
+    margin: 0 auto;
+  }
+  .finish-dot.active {
+    opacity: 1;
+    animation: blinkDot 1s ease-out;
+  }
+
+  @keyframes blinkDot {
+    0%   { transform: scale(1); opacity: 1; }
+    50%  { transform: scale(2); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+  }
+
+  .banner-top {
+    font-size: 0.9rem;
+    color: #9ca3af;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <div class="session-title" id="session-name">Cargando…</div>
+    <div class="session-sub" id="session-extra"></div>
+  </div>
+  <div class="timer-box">
+    <div class="timer-label">Tiempo de sesión</div>
+    <div class="timer" id="timer">00:00:00.000</div>
+  </div>
+</header>
+
+<main>
+  <div class="banner-top">
+    <div id="banner-left"></div>
+    <div id="banner-right"></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr id="table-header-row">
+        <!-- columnas se generan dinámicamente según sectores -->
+      </tr>
+    </thead>
+    <tbody id="table-body">
+      <tr><td colspan="12" style="padding:20px;color:#aaa;">Cargando datos…</td></tr>
+    </tbody>
+  </table>
+</main>
+
+<script>
+/* ===============================
+   CONFIG
+================================ */
+const API = "http://localhost:4000/api";
+
+const params = new URLSearchParams(window.location.search);
+const sessionId = params.get("session");
+const mode = (params.get("mode") || "normal").toLowerCase();      // normal | compact | xl
+const ranking = (params.get("ranking") || "race").toLowerCase();  // race | bestlap | average | laps
+const categoryFilter = (params.get("category") || "").toLowerCase();
+
+/* ===============================
+   ESTADO
+================================ */
+let lastLaps = {};
+let drivers = [];
+let driverByName = {};   // nombre MAYUS -> driver
+let hasSectors = false;
+
+/* ===============================
+   UTILIDADES
+================================ */
+function formatMs(ms) {
+  if (ms == null || isNaN(ms)) return "-";
+  let total = Math.max(0, ms);
+  let h = Math.floor(total / 3600000);
+  total %= 3600000;
+  let m = Math.floor(total / 60000);
+  total %= 60000;
+  let s = Math.floor(total / 1000);
+  let ms2 = total % 1000;
+  return (
+    String(h).padStart(2,"0") + ":" +
+    String(m).padStart(2,"0") + ":" +
+    String(s).padStart(2,"0") + "." +
+    String(ms2).padStart(3,"0")
+  );
+}
+
+function formatLap(ms) {
+  if (ms == null || isNaN(ms)) return "-";
+  let total = Math.max(0, ms);
+  let m = Math.floor(total / 60000);
+  total %= 60000;
+  let s = Math.floor(total / 1000);
+  let ms2 = total % 1000;
+  if (m > 0) {
+    return (
+      m + ":" +
+      String(s).padStart(2,"0") + "." +
+      String(ms2).padStart(3,"0")
+    );
+  }
+  return (
+    s + "." + String(ms2).padStart(3,"0")
+  );
+}
+
+/* ===============================
+   DRIVERS (para categorías)
+================================ */
+async function loadDrivers() {
+  try {
+    const res = await fetch(API + "/drivers");
+    drivers = await res.json();
+    driverByName = {};
+    drivers.forEach(d => {
+      if (!d.name) return;
+      driverByName[d.name.toUpperCase()] = d;
+    });
+  } catch (e) {
+    console.error("Error cargando drivers:", e);
+  }
+}
+
+/* ===============================
+   SESIÓN / CRONO
+   (todos los tiempos vienen del backend)
+================================ */
+async function loadSession() {
+  const res = await fetch(`${API}/sessions/${sessionId}`);
+  const s = await res.json();
+
+  document.getElementById("session-name").textContent =
+    s.name || `Sesión ${s.id}`;
+  document.getElementById("session-extra").textContent =
+    `Estado: ${s.status || "-"}  •  ID: ${s.id}`;
+
+  document.getElementById("timer").textContent =
+    formatMs((s.elapsed_seconds || 0) * 1000);
+}
+
+/* ===============================
+   LIVE TIMING
+================================ */
+async function loadLive() {
+  const res = await fetch(`${API}/sessions/${sessionId}/live-extended`);
+  const data = await res.json();
+  updateTable(data.classification || [], data.bestLapTime);
+}
+
+/* ===============================
+   TABLA
+================================ */
+function buildHeaderRow() {
+  const tr = document.getElementById("table-header-row");
+  tr.innerHTML = "";
+
+  const cols = [
+    { key: "finish", label: ""   , cls:"finish-col" },
+    { key: "pos"   , label: "Pos", cls:"pos-col" },
+    { key: "num"   , label: "#"  , cls:"num-col" },
+    { key: "name"  , label: "Piloto" },
+    { key: "cat"   , label: "Cat.", cls:"cat-col" },
+    { key: "laps"  , label: "V"  , cls:"laps-col" }
+  ];
+
+  if (hasSectors) {
+    cols.push({ key:"s1", label:"S1" });
+    cols.push({ key:"s2", label:"S2" });
+    cols.push({ key:"s3", label:"S3" });
+  }
+
+  cols.push({ key:"last", label:"Última" });
+  cols.push({ key:"best", label:"Mejor" });
+  cols.push({ key:"total", label:"Total" });
+  cols.push({ key:"gap", label:"Gap" });
+  cols.push({ key:"diff", label:"Diff" });
+
+  cols.forEach(c => {
+    const th = document.createElement("th");
+    th.textContent = c.label;
+    if (c.cls) th.className = c.cls;
+    tr.appendChild(th);
+  });
+}
+
+function updateTable(rows, bestSession) {
+  const body = document.getElementById("table-body");
+
+  if (!rows || !rows.length) {
+    body.innerHTML =
+      '<tr><td colspan="12" style="padding:20px;color:#aaa;">Sin datos</td></tr>';
+    return;
+  }
+
+  // Detectar si tenemos sectores en los datos (y no inventar nada)
+  hasSectors = rows.some(
+    r => r.sector1 != null || r.sector2 != null || r.sector3 != null
+  );
+  buildHeaderRow();
+
+  // Enriquecer con categoría desde drivers (si existe)
+  const enriched = rows.map(r => {
+    const d = driverByName[(r.racerName || "").toUpperCase()];
+    const cat = d ? (d.category || d.level || "") : "";
+    return { ...r, category: cat };
+  });
+
+  // Filtro por categoría (si se indicó)
+  let filtered = enriched;
+  if (categoryFilter) {
+    filtered = enriched.filter(r =>
+      (r.category || "").toLowerCase() === categoryFilter
+    );
+  }
+
+  // Ranking / orden de filas
+  let sorted = [...filtered];
+  if (ranking === "bestlap") {
+    sorted.sort((a,b) => (a.best ?? Infinity) - (b.best ?? Infinity));
+  } else if (ranking === "average") {
+    sorted.sort((a,b) => (a.mean ?? Infinity) - (b.mean ?? Infinity));
+  } else if (ranking === "laps") {
+    sorted.sort((a,b) => (b.lapcount ?? 0) - (a.lapcount ?? 0));
+  } else {
+    // clasificación por posición
+    sorted.sort((a,b) => (a.pos ?? 9999) - (b.pos ?? 9999));
+  }
+
+  // Limitar filas según modo
+  let limit = 20;
+  if (mode === "compact") limit = 40;
+  if (mode === "xl") limit = 8;
+  sorted = sorted.slice(0, limit);
+
+  // Banners
+  const bannerLeft = document.getElementById("banner-left");
+  const bannerRight = document.getElementById("banner-right");
+
+  bannerLeft.textContent =
+    `Vista: ${mode.toUpperCase()}  •  Ranking: ${ranking.toUpperCase()}` +
+    (categoryFilter ? `  •  Cat: ${categoryFilter}` : "");
+
+  if (bestSession) {
+    bannerRight.textContent = `Mejor vuelta sesión: ${formatLap(bestSession)}`;
+  } else {
+    bannerRight.textContent = "";
+  }
+
+  // Detección de paso por meta
+  const newLastLaps = {};
+
+  body.innerHTML = sorted.map(r => {
+    const pid = r.participant_id;
+    const previousLaps = lastLaps[pid] || 0;
+    const newLap = (r.lapcount || 0) > previousLaps;
+    newLastLaps[pid] = r.lapcount || 0;
+
+    const lastValid = r.lastTime != null;
+    const isBestSession =
+      bestSession != null && r.best != null && r.best === bestSession;
+    const isPersonalBest =
+      r.lastTime != null && r.best != null && r.lastTime === r.best;
+    const isSlow =
+      r.lastTime != null && r.mean != null && r.lastTime > r.mean * 1.03;
+
+    const lastCls = [
+      "time-cell",
+      isBestSession ? "time-best-session" :
+      isPersonalBest ? "time-best-personal" :
+      isSlow ? "time-slow" : ""
+    ].filter(Boolean).join(" ");
+
+    const bestCls = [
+      "time-cell",
+      isBestSession ? "time-best-session" : ""
+    ].filter(Boolean).join(" ");
+
+    const s1 = r.sector1 != null ? formatLap(r.sector1) : "-";
+    const s2 = r.sector2 != null ? formatLap(r.sector2) : "-";
+    const s3 = r.sector3 != null ? formatLap(r.sector3) : "-";
+
+    const dotClass = newLap ? "finish-dot active" : "finish-dot";
+
+    return `
+      <tr class="${r.pos === 1 ? "leader" : ""}">
+        <td class="finish-col"><div class="${dotClass}"></div></td>
+        <td class="pos-col">${r.pos ?? "-"}</td>
+        <td class="num-col">${r.racerNumber ?? "-"}</td>
+        <td>${r.racerName ?? "-"}</td>
+        <td class="cat-col">${r.category || "-"}</td>
+        <td class="laps-col">${r.lapcount ?? 0}</td>
+        ${hasSectors ? `
+        <td class="time-cell">${s1}</td>
+        <td class="time-cell">${s2}</td>
+        <td class="time-cell">${s3}</td>
+        ` : ""}
+        <td class="${lastCls}">${lastValid ? formatLap(r.lastTime) : "-"}</td>
+        <td class="${bestCls}">${r.best != null ? formatLap(r.best) : "-"}</td>
+        <td class="time-cell">${r.time != null ? formatMs(r.time) : "-"}</td>
+        <td>${r.gap ?? "-"}</td>
+        <td>${r.diff ?? "-"}</td>
+      </tr>
+    `;
+  }).join("");
+
+  lastLaps = newLastLaps;
+}
+
+/* ===============================
+   INIT
+================================ */
+async function init() {
+  if (!sessionId) {
+    alert("Debes abrir: tv.html?session=ID");
+    return;
+  }
+
+  document.body.dataset.mode = mode;
+
+  await loadDrivers();
+  await loadSession();
+  await loadLive();
+
+  // refresco: todos los tiempos vienen del backend,
+  // solo los formateamos.
+  setInterval(loadSession, 1000);
+  setInterval(loadLive, 1500);
+}
+
+init();
+</script>
+
+</body>
+</html>

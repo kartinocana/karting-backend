@@ -1,0 +1,9 @@
+📡 WebSocket live en vez de fetch
+
+🧾 Motivo de invalidación en el JSON interno
+
+📄 JSON “lite” solo clasificación para overlays
+
+🔒 Bloqueo de vueltas revisadas
+
+🕒 Replay de sesión desde tiempos.json

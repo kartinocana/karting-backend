@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Redirigiendo...</title>
+<style>
+body{background:#0b0f1a;color:white;font-family:Arial;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}
+.card{background:#0f1420;padding:20px;border-radius:12px;max-width:720px;}
+a{color:#60a5fa}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>Redirigiendo…</h2>
+  <p>Esta página era una versión antigua de la gestión del campeonato.</p>
+  <p>Te llevo a la pantalla correcta.</p>
+  <p><a id="link" href="championship_list.html">Ir manualmente</a></p>
+</div>
+
+<script>
+const params=new URLSearchParams(window.location.search);
+const champId=params.get("championshipId");
+
+const target = champId
+  ? `championship_manage.html?championshipId=${champId}`
+  : "championship_list.html";
+
+document.getElementById("link").href = target;
+window.location.replace(target);
+</script>
+</body>
+</html>

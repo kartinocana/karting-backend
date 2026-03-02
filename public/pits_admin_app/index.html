@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PITS / ADMIN</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <div class="h1">PITS / ADMIN</div>
+      <div class="sub" id="whoami">Sin login</div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="btn-login">Login</button>
+      <button class="btn" id="btn-logout">Logout</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="row">
+        <label>API</label>
+        <input id="api" value="http://localhost:4000/api" />
+        <button class="btn" id="btn-save-api">Guardar</button>
+      </div>
+      <div class="row">
+        <label>Sesión</label>
+        <select id="session"></select>
+        <button class="btn" id="btn-reload">Recargar</button>
+      </div>
+      <div class="badges">
+        <span class="badge" id="b-status">Estado: -</span>
+        <span class="badge" id="b-flag">Bandera: -</span>
+        <span class="badge" id="b-part">Participantes: -</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <button class="btn green" id="btn-start">Start</button>
+        <button class="btn" id="btn-pause">Pause</button>
+        <button class="btn red" id="btn-finish">Finish</button>
+        <div class="spacer"></div>
+        <button class="btn" data-flag="GREEN">🟢</button>
+        <button class="btn" data-flag="YELLOW">🟡</button>
+        <button class="btn" data-flag="RED">🔴</button>
+        <button class="btn" data-flag="CHECKERED">🏁</button>
+      </div>
+      <div class="hint">Tip: toca en <b>Kart</b> o <b>Piloto</b> para cambiar en vivo.</div>
+    </section>
+
+    <section class="card tablecard">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Kart</th>
+            <th>Piloto</th>
+            <th>Vueltas</th>
+            <th>Best</th>
+            <th>Last</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="6" class="muted">Sin datos</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- Login modal -->
+  <div class="modal" id="m-login" aria-hidden="true">
+    <div class="modalbox">
+      <div class="modalhead">
+        <div class="h2">Login</div>
+        <button class="btn" id="btn-close-login">Cerrar</button>
+      </div>
+      <div class="row">
+        <label>Rol</label>
+        <select id="role">
+          <option value="pits">PITS</option>
+          <option value="admin">ADMIN</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Token</label>
+        <input id="token" placeholder="pits-secreto-2025 / admin-secreto-2025" />
+      </div>
+      <div class="row right">
+        <button class="btn green" id="btn-do-login">Guardar</button>
+      </div>
+      <div class="muted small">Nota: por ahora es token directo (rápido). Luego lo cambiamos a login real.</div>
+    </div>
+  </div>
+
+  <!-- Change modal -->
+  <div class="modal" id="m-change" aria-hidden="true">
+    <div class="modalbox">
+      <div class="modalhead">
+        <div class="h2" id="change-title">Cambiar</div>
+        <button class="btn" id="btn-close-change">Cerrar</button>
+      </div>
+      <div class="row">
+        <label id="change-label">Selecciona</label>
+        <select id="change-select"></select>
+      </div>
+      <div class="row right">
+        <button class="btn green" id="btn-confirm-change">Asignar</button>
+      </div>
+      <div class="muted small" id="change-help"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

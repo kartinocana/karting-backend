@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mantenimiento · Trabajos</title>
+  <link rel="stylesheet" href="maintenance.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>🔧 Mantenimiento · Trabajos</h2>
+      <div class="right">
+        <button class="btn" id="btn-refresh">Recargar</button>
+        <a class="btn" href="admin.html">Volver al Admin</a>
+      </div>
+    </div>
+
+    <nav class="subnav">
+      <a href="maintenance_dashboard.html">Resumen</a>
+      <a href="maintenance_tasks.html">Tareas</a>
+      <a href="maintenance_rules.html">Reglas</a>
+      <a class="active" href="maintenance_jobs.html">Trabajos</a>
+      <a href="maintenance_history.html">Historial</a>
+    </nav>
+
+    <div class="toolbar">
+      <div class="field">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="open">Abiertos</option>
+          <option value="all">Todos</option>
+          <option value="done">Cerrados</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Kart</label>
+        <select id="c-kart"></select>
+      </div>
+
+      <div class="field" style="min-width:220px">
+        <label>Título</label>
+        <input id="c-title" placeholder="Ej: Servicio 10h" />
+      </div>
+
+      <div class="field" style="min-width:320px">
+        <label>Descripción</label>
+        <input id="c-desc" placeholder="Ej: cambio aceite, filtro…" />
+      </div>
+
+      <div class="spacer"></div>
+
+      <button class="btn primary" id="btn-create">Crear trabajo</button>
+      <button class="btn" id="btn-refresh2">Recargar</button>
+    </div>
+
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Kart</th><th>Título</th><th>Estado</th><th>Creado</th><th>Cerrado</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="7" class="muted">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="maintenance_common.js"></script>
+  <script src="maintenance_jobs.js"></script>
+</body>
+</html>

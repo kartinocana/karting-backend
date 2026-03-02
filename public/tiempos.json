@@ -1,0 +1,53 @@
+{
+  "updatedAt": "2026-02-26T21:12:43.480Z",
+  "session": {
+    "id": 1,
+    "name": "Sesion Demo",
+    "status": "running",
+    "mode": "race"
+  },
+  "classification": [
+    {
+      "participant_id": 204,
+      "pos": 1,
+      "racerName": "FERNADO GOMEZ GARCIA",
+      "racerNumber": 111,
+      "nickname": "Nando",
+      "racerTransponder": "76699",
+      "category": "Pro",
+      "weight": "80.00",
+      "lapcount": 3,
+      "lastTime": 31634,
+      "best": 10876,
+      "time": 57909,
+      "gap": "-",
+      "diff": "-",
+      "mean": 19303,
+      "consistency": 46.17265848721091
+    }
+  ],
+  "participants": [
+    {
+      "id": 204,
+      "name": "FERNADO GOMEZ GARCIA",
+      "kart": 111,
+      "laps": 3,
+      "bestLapMs": 10876,
+      "totalMs": 57909,
+      "lapTimes": [
+        {
+          "ms": 10876,
+          "valid": true
+        },
+        {
+          "ms": 15399,
+          "valid": true
+        },
+        {
+          "ms": 31634,
+          "valid": true
+        }
+      ]
+    }
+  ]
+}

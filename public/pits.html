@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width">
+</head>
+<body>
+  <h2>Pits Control</h2>
+  <div id="list"></div>
+
+<script>
+const API = "http://IP_DEL_BACKEND:4000/api";
+let sessionId = null;
+
+async function load() {
+  const s = await fetch(API + "/sessions?status=running").then(r => r.json());
+  if (!s.length) return;
+  sessionId = s[0].id;
+
+  const p = await fetch(`${API}/sessions/${sessionId}/participants`).then(r => r.json());
+  document.getElementById("list").innerHTML = p.map(x => `
+    <div style="margin:6px 0">
+      #${x.kart_number} ${x.driver_name}
+      <button onclick="changeKart(${x.id})">Kart</button>
+      <button onclick="changeDriver(${x.id})">Piloto</button>
+    </div>
+  `).join("");
+}
+
+async function changeKart(pid) {
+  const kart = prompt("Nuevo kart:");
+  if (!kart) return;
+  await fetch(`${API}/sessions/${sessionId}/participants/${pid}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kart_id: Number(kart) })
+  });
+  load();
+}
+
+async function changeDriver(pid) {
+  const driver = prompt("ID piloto:");
+  if (!driver) return;
+  await fetch(`${API}/sessions/${sessionId}/participants/${pid}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ driver_id: Number(driver) })
+  });
+  load();
+}
+const TOKEN = "supersecreto-pits-2025";
+
+await fetch(url, {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + TOKEN
+  },
+  body: JSON.stringify(payload)
+});
+
+load();
+setInterval(load, 3000);
+</script>
+</body>
+</html>

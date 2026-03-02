@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Campeonatos</title>
+
+<style>
+  :root{
+    --bg:#0b0f1a;
+    --card:#0f1420;
+    --muted:#9ca3af;
+    --line:#1e2330;
+    --hover:#1a2233;
+    --primary:#2563eb;
+    --success:#059669;
+    --warning:#d97706;
+    --danger:#dc2626;
+  }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    color:white;
+    font-family:Arial, sans-serif;
+  }
+
+  .container{
+    max-width:1200px;
+    margin:auto;
+    padding:22px;
+  }
+
+  .topbar{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+
+  h1{
+    font-size:22px;
+    margin:0;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+
+  .pill{
+    font-size:12px;
+    color:#cbd5e1;
+    background:#0b1220;
+    border:1px solid var(--line);
+    padding:4px 8px;
+    border-radius:999px;
+  }
+
+  .controls{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  input, select{
+    background:#0b0f1a;
+    color:white;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 12px;
+    outline:none;
+  }
+
+  input::placeholder{ color:#64748b; }
+
+  button{
+    border:none;
+    border-radius:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    color:white;
+    background:#1f2937;
+  }
+
+  button:hover{ filter:brightness(1.05); }
+
+  .primary{ background:var(--primary); }
+  .success{ background:var(--success); }
+  .warning{ background:var(--warning); }
+  .danger{ background:var(--danger); }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap:14px;
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  }
+
+  .card:hover{
+    background: #101a2c;
+    border-color:#24324a;
+  }
+
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+
+  .title{
+    font-size:16px;
+    margin:0;
+    font-weight:700;
+  }
+
+  .meta{
+    margin-top:6px;
+    color:var(--muted);
+    font-size:13px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .badge{
+    font-size:12px;
+    padding:4px 8px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:#0b0f1a;
+    color:#cbd5e1;
+  }
+
+  .actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:12px;
+  }
+
+  .actions button{
+    padding:9px 10px;
+    border-radius:10px;
+    font-size:13px;
+  }
+
+  .muted{
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .panel{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:14px;
+  }
+
+  .panel h3{
+    margin:0 0 10px 0;
+    font-size:16px;
+  }
+
+  .form{
+    display:grid;
+    grid-template-columns: 1fr 160px 160px;
+    gap:10px;
+  }
+
+  @media (max-width: 850px){
+    .form{ grid-template-columns:1fr; }
+  }
+
+  .notice{
+    margin-top:8px;
+    font-size:13px;
+    color:#cbd5e1;
+  }
+
+  .empty{
+    padding:22px;
+    text-align:center;
+    color:var(--muted);
+    border:1px dashed var(--line);
+    border-radius:14px;
+    background:rgba(15,20,32,.6);
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="topbar">
+    <h1>🏆 Campeonatos <span class="pill" id="countPill">—</span></h1>
+
+    <div class="controls">
+      <input id="q" placeholder="Buscar (nombre o temporada)..." />
+      <select id="sort">
+        <option value="new">Más recientes</option>
+        <option value="old">Más antiguos</option>
+        <option value="name">Nombre A→Z</option>
+      </select>
+      <button class="primary" onclick="toggleCreate()">➕ Crear</button>
+      <button onclick="reload()">🔄 Recargar</button>
+    </div>
+  </div>
+
+  <!-- Crear campeonato (inline, profesional y rápido) -->
+  <div class="panel" id="createPanel" style="display:none;">
+    <h3>Crear campeonato</h3>
+    <div class="form">
+      <input id="newName" placeholder="Nombre (ej: Liga Indoor)" />
+      <input id="newSeason" type="number" placeholder="Temporada (ej: 2026)" />
+      <button class="success" onclick="createChamp()">Guardar</button>
+    </div>
+    <div class="notice">Se guardará en tu backend y abrirá directamente el gestor del campeonato.</div>
+  </div>
+
+  <div id="grid" class="grid"></div>
+
+  <div id="empty" class="empty" style="display:none;">
+    No hay campeonatos todavía. Crea uno con el botón <b>➕ Crear</b>.
+  </div>
+
+</div>
+
+<script>
+  const API_BASE = "http://localhost:4000/api";
+
+  let all = [];
+
+  const $ = (id) => document.getElementById(id);
+
+  function toggleCreate(){
+    const p = $("createPanel");
+    p.style.display = (p.style.display === "none") ? "block" : "none";
+  }
+
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  async function apiGet(path){
+    const r = await fetch(`${API_BASE}${path}`);
+    if(!r.ok) throw new Error(`GET ${path} -> ${r.status}`);
+    return r.json();
+  }
+
+  async function apiSend(path, method, body){
+    const r = await fetch(`${API_BASE}${path}`,{
+      method,
+      headers: {"Content-Type":"application/json"},
+      body: body ? JSON.stringify(body) : undefined
+    });
+
+    if(!r.ok){
+      const txt = await r.text().catch(()=> "");
+      throw new Error(txt || `${method} ${path} -> ${r.status}`);
+    }
+
+    // algunos DELETE no devuelven JSON
+    const ct = r.headers.get("content-type") || "";
+    if(ct.includes("application/json")) return r.json();
+    return null;
+  }
+
+  async function reload(){
+    try{
+      all = await apiGet("/championships");
+      render();
+    }catch(e){
+      alert("Error cargando campeonatos: " + e.message);
+    }
+  }
+
+  function getFilteredSorted(){
+    const q = $("q").value.trim().toLowerCase();
+    const sort = $("sort").value;
+
+    let list = [...all];
+
+    if(q){
+      list = list.filter(c => {
+        const name = String(c.name ?? "").toLowerCase();
+        const season = String(c.season ?? "").toLowerCase();
+        return name.includes(q) || season.includes(q);
+      });
+    }
+
+    if(sort === "name"){
+      list.sort((a,b) => String(a.name||"").localeCompare(String(b.name||"")));
+    }else if(sort === "old"){
+      list.sort((a,b) => Number(a.id||0) - Number(b.id||0));
+    }else{
+      list.sort((a,b) => Number(b.id||0) - Number(a.id||0));
+    }
+
+    return list;
+  }
+
+  function render(){
+    const list = getFilteredSorted();
+
+    $("countPill").textContent = `${list.length} en total`;
+    $("grid").innerHTML = "";
+    $("empty").style.display = (list.length === 0) ? "block" : "none";
+
+    list.forEach(c => {
+      const name = escapeHtml(c.name ?? "Sin nombre");
+      const season = (c.season == null || c.season === "") ? "—" : escapeHtml(c.season);
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="row">
+          <div>
+            <div class="title">${name}</div>
+            <div class="meta">
+              <span class="badge">Temporada: ${season}</span>
+              <span class="badge">ID: ${escapeHtml(c.id)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="primary" onclick="openManage(${Number(c.id)})">🧩 Gestionar</button>
+          <button onclick="openDashboard(${Number(c.id)})">📈 Dashboard</button>
+          <button onclick="openResults(${Number(c.id)})">📊 Resultados</button>
+          <button class="warning" onclick="openPenalties(${Number(c.id)})">⚠ Penalizaciones</button>
+<button class="danger" onclick="deleteChamp(${Number(c.id)}, '${name}')">
+  🗑 Borrar
+</button>
+        </div>
+      `;
+
+      $("grid").appendChild(card);
+    });
+  }
+
+  function openManage(id){
+    window.location = `championship_manage.html?championshipId=${id}`;
+  }
+  function openDashboard(id){
+    window.location = `championship_dashboard.html?championshipId=${id}`;
+  }
+  function openResults(id){
+    window.location = `championship_results.html?championshipId=${id}`;
+  }
+  function openPenalties(id){
+    window.location = `championship_penalties_ui.html?championshipId=${id}`;
+  }
+
+  async function createChamp(){
+    const name = $("newName").value.trim();
+    const seasonRaw = $("newSeason").value.trim();
+
+    if(!name) return alert("Pon un nombre.");
+    const season = seasonRaw ? Number(seasonRaw) : null;
+    if(seasonRaw && Number.isNaN(season)) return alert("Temporada inválida.");
+
+    try{
+      const created = await apiSend("/championships","POST",{name, season});
+      // abrir directamente el gestor profesional
+      window.location = `championship_manage.html?championshipId=${created.id}`;
+    }catch(e){
+      alert("Error creando campeonato: " + e.message);
+    }
+  }
+
+  async function deleteChamp(id, name){
+    if(!confirm(`¿Borrar el campeonato "${name}"?\n\nSi tu backend no permite borrar con resultados, te lo dirá.`)) return;
+
+    try{
+      // Si tu backend no tiene DELETE /championships/:id, te mostrará el error y no pasa nada.
+      await apiSend(`/championships/${id}`,"DELETE");
+      await reload();
+    }catch(e){
+      alert("No se pudo borrar: " + e.message);
+    }
+  }
+
+  $("q").addEventListener("input", render);
+  $("sort").addEventListener("change", render);
+
+  reload();
+</script>
+</body>
+</html>

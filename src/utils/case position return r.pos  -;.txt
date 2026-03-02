@@ -1,0 +1,14 @@
+case "position": return r.pos ?? "-";
+    case "number": return r.racerNumber ?? "-";
+    case "pilot": return r.racerName ?? "-";
+    case "nick": return r.nickname ?? "-";
+    case "weight": return r.weight != null ? Number(r.weight).toFixed(0) : "-";
+    case "category": return r.category ?? "-";
+    case "laps": return r.lapcount ?? 0;
+    case "lastLap": return r.lastTime ? formatLapMs(r.lastTime) : "-";
+    case "bestLap": return r.best ? formatLapMs(r.best) : "-";
+    case "total": return r.time ? formatMs(r.time) : "-";
+    case "gap": return r.gap ?? "-";
+    case "diff": return r.diff ?? "-";
+    case "media": return r.mean ? formatLapMs(r.mean) : "-";
+    case "consistency":

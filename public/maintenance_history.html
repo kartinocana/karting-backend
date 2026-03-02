@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mantenimiento · Historial</title>
+  <link rel="stylesheet" href="maintenance.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>🔧 Mantenimiento · Historial</h2>
+      <div class="right">
+        <button class="btn" id="btn-refresh">Recargar</button>
+        <a class="btn" href="admin.html">Volver al Admin</a>
+      </div>
+    </div>
+
+    <nav class="subnav">
+      <a href="maintenance_dashboard.html">Resumen</a>
+      <a href="maintenance_tasks.html">Tareas</a>
+      <a href="maintenance_rules.html">Reglas</a>
+      <a href="maintenance_jobs.html">Trabajos</a>
+      <a class="active" href="maintenance_history.html">Historial</a>
+    </nav>
+
+    <div class="toolbar">
+      <div class="field" style="min-width:260px">
+        <label>Kart</label>
+        <select id="kart"></select>
+      </div>
+
+      <div class="field" style="min-width:260px">
+        <label>Buscar</label>
+        <input id="q" placeholder="texto, id, regla…" />
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="tasks">Tareas</button>
+        <button class="tab" data-tab="jobs">Trabajos</button>
+        <button class="tab" data-tab="alerts">Alertas</button>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead id="thead"></thead>
+        <tbody id="tbody">
+          <tr><td class="muted">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="maintenance_common.js"></script>
+  <script src="maintenance_history.js"></script>
+</body>
+</html>

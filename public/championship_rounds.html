@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Crear pruebas</title>
+<style>
+body{background:#0b0f1a;color:white;font-family:Arial;}
+.container{padding:20px;max-width:1000px;margin:auto;}
+.card{background:#0f1420;padding:20px;border-radius:12px;margin-bottom:15px;}
+input{width:100%;padding:8px;border-radius:8px;border:none;}
+button{padding:8px 12px;border:none;border-radius:8px;cursor:pointer;}
+.primary{background:#2563eb;color:white;}
+.danger{background:#dc2626;color:white;margin-left:8px;}
+.secondary{background:#334155;color:white;margin-left:8px;}
+li{margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.liText{flex:1;}
+.small{padding:6px 10px;border-radius:8px;font-size:12px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>Crear pruebas del campeonato</h2>
+
+<div class="card">
+  <label>Nombre de la prueba</label>
+  <input id="roundName">
+
+  <label style="margin-top:8px;display:block">Fecha</label>
+  <input id="roundDate" type="date">
+
+  <button class="primary" style="margin-top:10px"
+  onclick="createRound()">Añadir prueba</button>
+</div>
+
+<div class="card">
+  <h3>Pruebas creadas</h3>
+  <ul id="roundList"></ul>
+
+  <button class="primary" onclick="nextStep()">
+    Guardar y continuar
+  </button>
+</div>
+
+</div>
+
+<div class="card">
+  <h3>Resultados y sanciones</h3>
+
+  <button class="primary"
+  onclick="window.location='championship_results.html?championshipId='+champId">
+  📊 Ver resultados por carrera
+  </button>
+
+  <button class="primary" style="margin-left:8px"
+  onclick="window.location='championship_penalties_ui.html?championshipId='+champId">
+  ⚠️ Gestionar penalizaciones
+  </button>
+</div>
+
+<script>
+const API_BASE="http://localhost:4000/api";
+const params=new URLSearchParams(window.location.search);
+const champId=params.get("championshipId");
+
+// 🔧 AJUSTA ESTAS RUTAS si tu backend usa otra convención.
+// Mantengo tu POST/GET tal cual estaban.
+const ROUNDS_LIST_CREATE = () => `${API_BASE}/championships/${champId}/rounds`;
+
+// Para editar / borrar propongo estas (lo más normal):
+const ROUND_UPDATE = (id) => `${API_BASE}/championships/${champId}/rounds/${id}`;
+const ROUND_DELETE = (id) => `${API_BASE}/championships/${champId}/rounds/${id}`;
+
+// Si tu backend en vez de eso usa /api/rounds/:id, cambia a:
+// const ROUND_UPDATE = (id) => `${API_BASE}/rounds/${id}`;
+// const ROUND_DELETE = (id) => `${API_BASE}/rounds/${id}`;
+
+async function createRound(){
+  await fetch(ROUNDS_LIST_CREATE(),{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      name:roundName.value,
+      round_date:roundDate.value
+    })
+  });
+  roundName.value="";
+  roundDate.value="";
+  loadRounds();
+}
+
+async function deleteRound(id){
+  if(!confirm("¿Borrar esta prueba?")) return;
+
+  await fetch(ROUND_DELETE(id),{
+    method:"DELETE"
+  });
+
+  loadRounds();
+}
+
+async function editRound(x){
+  // x trae {id, name, round_date}
+  const newName = prompt("Nuevo nombre de la prueba:", x.name ?? "");
+  if(newName === null) return; // cancel
+
+  // Fecha: si está en ISO con hora, intentamos quedarnos con YYYY-MM-DD
+  const oldDate = (x.round_date || "").toString().slice(0,10);
+  const newDate = prompt("Nueva fecha (YYYY-MM-DD) o vacío:", oldDate);
+  if(newDate === null) return; // cancel
+
+  await fetch(ROUND_UPDATE(x.id),{
+    method:"PUT",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      name: (newName || "").trim(),
+      round_date: (newDate || "").trim() || null
+    })
+  });
+
+  loadRounds();
+}
+
+async function loadRounds(){
+  const r = await fetch(ROUNDS_LIST_CREATE());
+  const d = await r.json();
+
+  roundList.innerHTML="";
+  d.forEach(x=>{
+    const dateTxt = (x.round_date || "").toString().slice(0,10); // muestra solo YYYY-MM-DD
+
+    roundList.innerHTML += `
+      <li>
+        <div class="liText">${x.name} — ${dateTxt}</div>
+        <div>
+          <button class="secondary small" onclick='editRound(${JSON.stringify(x).replace(/'/g,"&#39;")})'>✏️ Editar</button>
+          <button class="danger small" onclick="deleteRound(${x.id})">🗑️ Borrar</button>
+        </div>
+      </li>
+    `;
+  });
+}
+
+function nextStep(){
+  window.location=`championship_setup.html?championshipId=${champId}`;
+}
+
+loadRounds();
+</script>
+</body>
+</html>s

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mantenimiento · Resumen</title>
+  <link rel="stylesheet" href="maintenance.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>🔧 Mantenimiento · Resumen</h2>
+      <div class="right">
+        <button class="btn" id="btn-refresh">Recargar</button>
+        <a class="btn" href="admin.html">Volver al Admin</a>
+      </div>
+    </div>
+
+    <nav class="subnav">
+      <a class="active" href="maintenance_dashboard.html">Resumen</a>
+      <a href="maintenance_tasks.html">Tareas</a>
+      <a href="maintenance_rules.html">Reglas</a>
+      <a href="maintenance_jobs.html">Trabajos</a>
+      <a href="maintenance_history.html">Historial</a>
+    </nav>
+
+    <div class="kpis">
+      <div class="kpi">
+        <div>
+          <div class="label">Karts OK</div>
+          <div class="value" id="kpi-ok">-</div>
+        </div>
+        <span class="badge ok">OK</span>
+      </div>
+
+      <div class="kpi">
+        <div>
+          <div class="label">Karts WARN</div>
+          <div class="value" id="kpi-warn">-</div>
+        </div>
+        <span class="badge warn">WARN</span>
+      </div>
+
+      <div class="kpi">
+        <div>
+          <div class="label">Karts OVERDUE</div>
+          <div class="value" id="kpi-overdue">-</div>
+        </div>
+        <span class="badge danger">OVERDUE</span>
+      </div>
+
+      <!-- ✅ NUEVO KPI OPERATIVO -->
+      <div class="kpi">
+        <div>
+          <div class="label">Karts REVISAR</div>
+          <div class="value" id="kpi-review">-</div>
+        </div>
+        <span class="badge danger">REVISAR</span>
+      </div>
+
+      <div class="kpi">
+        <div>
+          <div class="label">Tareas abiertas</div>
+          <div class="value" id="kpi-open-tasks">-</div>
+        </div>
+        <span class="badge">Open</span>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="panel">
+        <div class="panel-title">Acciones rápidas</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn primary" href="maintenance_tasks.html">Ir a Tareas</a>
+          <a class="btn" href="maintenance_rules.html">Gestionar Reglas</a>
+          <a class="btn" href="maintenance_history.html">Ver Historial</a>
+	  
+        </div>
+        <p class="muted" style="margin-top:10px">
+          Tip: “REVISAR” significa que hay tareas/trabajos pendientes aunque el estado técnico (horas) sea OK.
+        </p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Kart</th>
+              <th>Estado</th>
+              <th>Horas</th>
+              <th>Restantes</th>
+              <th>Margen</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="karts-body">
+            <tr><td colspan="6" class="muted">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="maintenance_common.js"></script>
+  <script src="maintenance_dashboard.js"></script>
+</body>
+</html>

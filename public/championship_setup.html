@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Configurar pruebas</title>
+
+<style>
+body{background:#0b0f1a;color:white;font-family:Arial;}
+.container{padding:20px;max-width:1000px;margin:auto;}
+.card{background:#0f1420;padding:20px;border-radius:12px;margin-bottom:15px;}
+select,input{width:100%;padding:8px;border-radius:8px;background:#0b0f1a;color:white;border:1px solid #1e2330;}
+button{padding:8px 12px;border:none;border-radius:8px;}
+.primary{background:#2563eb;color:white;}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Configurar sesiones (Libres / Crono / Carreras)</h2>
+
+<div class="card">
+  <button class="primary" onclick="goBack()">⬅️ Volver a pruebas</button>
+</div>
+
+<div class="card">
+
+<label>Selecciona prueba</label>
+<select id="roundSelect"></select>
+
+<label style="margin-top:8px;display:block">Categoría</label>
+<select id="categorySelect"></select>
+
+<label style="margin-top:8px;display:block">Tipo de sesión</label>
+<select id="sessionType">
+<option value="practice">Libres</option>
+<option value="qualy">Crono</option>
+<option value="race">Carrera</option>
+</select>
+
+<label style="margin-top:8px;display:block">Nombre visible</label>
+<input id="eventName" placeholder="Ej: Carrera Pro">
+
+<button class="primary" style="margin-top:10px"
+onclick="createSession()">Crear sesión</button>
+
+</div>
+
+<div class="card">
+<button class="primary" onclick="nextStep()">
+Guardar y continuar a inscripciones
+</button>
+</div>
+
+</div>
+
+
+<script>
+
+const API_BASE="http://localhost:4000/api";
+const params=new URLSearchParams(window.location.search);
+
+const champId=params.get("championshipId");
+const urlRoundId=params.get("roundId");
+
+
+// =====================
+// CARGAR RONDAS
+// =====================
+async function loadRounds(){
+
+  const r=await fetch(`${API_BASE}/championships/${champId}/rounds`);
+  const d=await r.json();
+
+  roundSelect.innerHTML="";
+
+  d.forEach(x=>{
+    roundSelect.innerHTML+=`<option value="${x.id}">${x.name}</option>`;
+  });
+
+  // ⭐ si viene roundId en URL → seleccionarlo
+  if(urlRoundId){
+    roundSelect.value=urlRoundId;
+  }
+
+}
+
+
+// =====================
+// CARGAR CATEGORÍAS DINÁMICAS
+// =====================
+async function loadCategories(){
+
+  const r=await fetch(`${API_BASE}/driver-levels`);
+  const levels=await r.json();
+
+  categorySelect.innerHTML="";
+
+  levels.forEach(l=>{
+    categorySelect.innerHTML+=`
+      <option value="${l.code}">
+        ${l.name}
+      </option>
+    `;
+  });
+
+}
+
+
+// =====================
+// CREAR SESIÓN
+// =====================
+async function createSession(){
+
+  const roundId = roundSelect.value;
+  if(!roundId) return alert("Selecciona prueba");
+
+  // 🔴 ESTE ES EL CAMPO CORRECTO
+  const visibleName =
+    document.getElementById("eventName").value.trim();
+
+  if(!visibleName){
+    alert("Escribe Nombre visible");
+    return;
+  }
+
+  await fetch(`${API_BASE}/championships/${champId}/rounds/${roundId}/sessions`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      category: categorySelect.value,
+      session_type: sessionType.value,
+
+      // ✅ Manda ambos para compatibilidad
+      visibleName: visibleName,
+      event_name: visibleName,
+
+      racecontrol_session_id: null
+    })
+  });
+
+
+// =====================
+// SIGUIENTE
+// =====================
+function nextStep(){
+
+  const roundId=roundSelect.value;
+
+  window.location=
+    `championship_enroll.html?championshipId=${champId}&roundId=${roundId}`;
+
+}
+
+
+function goBack(){
+  window.location=`championship_manage.html?championshipId=${champId}`;
+}
+
+// =====================
+loadRounds();
+loadCategories();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Penalizaciones</title>
+<style>
+body{background:#0b0f1a;color:white;font-family:Arial;}
+.container{padding:20px;max-width:900px;margin:auto;}
+.card{background:#0f1420;padding:20px;border-radius:12px;margin-bottom:15px;}
+select,input{width:100%;padding:8px;border-radius:8px;}
+button{padding:8px 10px;border:none;border-radius:8px;}
+.primary{background:#2563eb;color:white;}
+.red{background:#7c2d12;color:white;}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h2>Penalizaciones de campeonato</h2>
+
+<div class="card">
+<label>Selecciona piloto</label>
+<select id="driverSelect"></select>
+
+<label style="margin-top:8px">Puntos de sanción</label>
+<input id="penPoints" type="number" value="0">
+
+<label style="margin-top:8px">Motivo</label>
+<input id="penReason">
+
+<button class="primary" style="margin-top:10px"
+onclick="addPenalty()">➕ Añadir penalización</button>
+</div>
+
+<div class="card">
+<h3>Historial de penalizaciones</h3>
+<ul id="penList"></ul>
+</div>
+
+<button class="primary" onclick="recalculate()">🔄 Recalcular clasificación</button>
+<button class="primary" onclick="window.history.back()">⬅️ Volver</button>
+</div>
+
+<script>
+const API_BASE="http://localhost:4000/api";
+const params=new URLSearchParams(window.location.search);
+const champId=params.get("championshipId");
+
+async function loadDrivers(){
+  const r = await fetch(`${API_BASE}/drivers`);
+  const d = await r.json();
+  driverSelect.innerHTML = `<option value="">-- Elige piloto --</option>`;
+  d.forEach(x=>{
+    driverSelect.innerHTML += `<option value="${x.id}">${x.name}</option>`;
+  });
+}
+
+async function loadHistory(){
+  const r = await fetch(`${API_BASE}/championships/${champId}/penalties/history`);
+  const h = await r.json();
+  penList.innerHTML="";
+  h.forEach(p=>{
+    penList.innerHTML += `
+      <li>
+        ${p.driver_name} — ${p.points} pts — ${p.reason}
+        <button class="red"
+          onclick="revokePen(${p.id})">❌ Quitar</button>
+      </li>`;
+  });
+}
+
+async function addPenalty(){
+  const driverId = driverSelect.value;
+  if(!driverId) return alert("Selecciona piloto");
+
+  await fetch(`${API_BASE}/championships/${champId}/penalties`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      racecontrol_driver_id: Number(driverId),
+      points: Number(penPoints.value),
+      reason: penReason.value
+    })
+  });
+
+  alert("Penalización añadida");
+  loadHistory();
+}
+
+async function revokePen(id){
+  await fetch(`${API_BASE}/championships/${champId}/penalties/${id}/revoke`,{
+    method:"POST"
+  });
+  loadHistory();
+}
+
+async function recalculate(){
+  await fetch(`${API_BASE}/championships/${champId}/recalculate`,{
+    method:"POST"
+  });
+  alert("Clasificación recalculada");
+}
+
+loadDrivers();
+loadHistory();
+</script>
+</body>
+</html>

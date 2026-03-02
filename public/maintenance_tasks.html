@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mantenimiento · Tareas</title>
+  <link rel="stylesheet" href="maintenance.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>🔧 Mantenimiento · Tareas</h2>
+      <div class="right">
+        <a class="btn" href="/api/maintenance/export/tasks" target="_blank">Exportar CSV</a>
+        <a class="btn" href="admin.html">Volver al Admin</a>
+      </div>
+    </div>
+
+    <nav class="subnav">
+      <a href="maintenance_dashboard.html">Resumen</a>
+      <a class="active" href="maintenance_tasks.html">Tareas</a>
+      <a href="maintenance_rules.html">Reglas</a>
+      <a href="maintenance_jobs.html">Trabajos</a>
+      <a href="maintenance_history.html">Historial</a>
+    </nav>
+
+    <div class="toolbar">
+      <div class="field">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="open">Abiertas</option>
+          <option value="all">Todas</option>
+          <option value="done">Cerradas</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Kart</label>
+        <select id="f-kart">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Buscar</label>
+        <input id="f-q" placeholder="id, regla, #kart…" />
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="field" style="min-width:220px">
+        <label>Crear tarea (kart_id)</label>
+        <select id="c-kart"></select>
+      </div>
+
+      <div class="field" style="min-width:160px">
+        <label>rule_id (opcional)</label>
+        <input id="c-rule" type="number" placeholder="Ej: 16" />
+      </div>
+
+      <button class="btn primary" id="btn-create">Crear</button>
+      <button class="btn" id="btn-refresh">Recargar</button>
+    </div>
+
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Kart</th><th>Regla</th><th>Estado</th><th>Creada</th><th>Cerrada</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="7" class="muted">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="maintenance_common.js"></script>
+  <script src="maintenance_tasks.js"></script>
+</body>
+</html>

@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Campeonato</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{
+  background:#0b0f1a;
+  color:white;
+  font-family:Arial;
+}
+.container{
+  padding:20px;
+  max-width:1200px;
+  margin:auto;
+}
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:15px;
+}
+.card{
+  background:#0f1420;
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:15px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+th,td{
+  padding:8px;
+  border-bottom:1px solid #1e2330;
+}
+button{
+  padding:8px 10px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+.primary{background:#2563eb;color:white;}
+.green{background:#059669;color:white;}
+.orange{background:#c2410c;color:white;}
+.red{background:#7c2d12;color:white;}
+
+canvas{
+  background:#0b0f1a;
+  border-radius:10px;
+}
+
+/* ==== PODIO EN COLUMNAS ==== */
+.podium-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap:15px;
+}
+
+.podium-col{
+  background:#0b0f1a;
+  border:1px solid #1e2330;
+  border-radius:12px;
+  padding:15px;
+  text-align:center;
+}
+.podium-col h3{
+  margin-top:0;
+  color:#93c5fd;
+}
+.step{
+  margin:10px 0;
+  padding:10px;
+  border-radius:10px;
+}
+.gold{background:#c9a227;}
+.silver{background:#9fa3a8;}
+.bronze{background:#b87333;}
+
+.step img{
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  border:2px solid white;
+  object-fit:cover;
+}
+
+/* ==== CATEGORÍAS ==== */
+.cat-bar{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+.cat-btn{
+  padding:6px 10px;
+  border-radius:8px;
+  border:1px solid #1e2330;
+  background:#0b0f1a;
+  color:white;
+  cursor:pointer;
+}
+.cat-btn.active{
+  background:#2563eb;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>📈 Dashboard de Campeonato</h2>
+<button class="primary" onclick="window.history.back()">⬅️ Volver</button>
+
+<!-- ===== SELECTOR DE CATEGORÍAS (filtro global) ===== -->
+<div class="card">
+<h3>Categorías (filtro global)</h3>
+<div class="cat-bar" id="categoryBar"></div>
+</div>
+
+<!-- ============ PODIOS POR CATEGORÍA ============ -->
+<div class="card">
+<h3>🏆 Podio por categoría</h3>
+
+<div class="podium-grid" id="podiumGrid"></div>
+
+</div>
+
+<!-- ============ FILA 1 ============ -->
+<div class="grid">
+
+<div class="card">
+<h3>Última carrera</h3>
+<table>
+<thead>
+<tr>
+<th>Pos</th><th>Piloto</th><th>Cat</th><th>Vueltas</th><th>Puntos</th>
+</tr>
+</thead>
+<tbody id="lastRaceBody">
+<tr><td colspan="5">Cargando...</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card">
+<h3>Puntos totales</h3>
+<canvas id="standingsChart"></canvas>
+</div>
+
+</div>
+
+<!-- ============ FILA 2 ============ -->
+<div class="grid">
+
+<div class="card">
+<h3>Puntos última carrera</h3>
+<canvas id="lastRaceChart"></canvas>
+</div>
+
+<div class="card">
+<h3>Evolución por ronda (top 5)</h3>
+<canvas id="evolutionChart"></canvas>
+</div>
+
+</div>
+
+<!-- ===== MEJORES VUELTAS ===== -->
+<div class="card">
+<h3>⚡ Mejores vueltas (última carrera)</h3>
+<table>
+<thead>
+<tr>
+<th>Piloto</th><th>Categoría</th><th>Mejor vuelta</th>
+</tr>
+</thead>
+<tbody id="bestLapsBody">
+<tr><td colspan="3">Cargando...</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- Penalizaciones -->
+<div class="card">
+<h3>Penalizaciones recientes</h3>
+<ul id="penaltiesList"><li>Cargando...</li></ul>
+</div>
+
+<!-- Acciones rápidas -->
+<div class="card">
+<h3>Acciones rápidas</h3>
+<button class="green"
+onclick="window.location='championship_results.html?championshipId='+champId">
+📊 Ver todas las carreras
+</button>
+
+<button class="orange"
+onclick="window.location='championship_penalties_ui.html?championshipId='+champId">
+⚠️ Gestionar penalizaciones
+</button>
+
+<button class="red" onclick="recalculate()">🔄 Recalcular clasificación</button>
+</div>
+
+</div>
+
+<script>
+
+const API_BASE="http://localhost:4000/api";
+const params=new URLSearchParams(window.location.search);
+const champId=params.get("championshipId");
+
+let categories=[];
+let currentCat="ALL";
+
+let standingsChartObj=null;
+let lastRaceChartObj=null;
+let evolutionChartObj=null;
+
+const driverCache={};
+
+
+// ================= CATEGORÍAS =================
+async function loadCategories(){
+
+  const levels=await fetch(`${API_BASE}/driver-levels`).then(r=>r.json());
+
+  categories=[{code:"ALL",name:"Todas"},...levels];
+
+  renderCategoryBar();
+}
+
+function renderCategoryBar(){
+
+  categoryBar.innerHTML="";
+
+  categories.forEach(c=>{
+    const btn=document.createElement("button");
+
+    btn.className="cat-btn"+(c.code==="ALL"?" active":"");
+    btn.textContent=c.name;
+
+    btn.onclick=()=>{
+      document.querySelectorAll(".cat-btn")
+        .forEach(b=>b.classList.remove("active"));
+
+      btn.classList.add("active");
+
+      currentCat=c.code;
+      refreshDashboard();
+    };
+
+    categoryBar.appendChild(btn);
+  });
+
+}
+
+
+// ================= DRIVERS CACHE =================
+async function getDriver(id){
+
+  if(driverCache[id]) return driverCache[id];
+
+  const d=await fetch(`${API_BASE}/drivers/${id}`).then(r=>r.json());
+
+  driverCache[id]=d;
+
+  return d;
+}
+
+
+// ================= ÚLTIMA CARRERA =================
+async function loadLastRace(){
+
+  const races=await fetch(`${API_BASE}/championships/${champId}/races`).then(r=>r.json());
+
+  if(!races.length){
+    lastRaceBody.innerHTML=`<tr><td colspan="5">No hay carreras aún</td></tr>`;
+    bestLapsBody.innerHTML=`<tr><td colspan="3">No hay carreras aún</td></tr>`;
+    destroyCharts();
+    return;
+  }
+
+  const lastRace=races[races.length-1];
+
+  let rows=await fetch(`${API_BASE}/championships/${champId}/races/${lastRace.id}/results`)
+    .then(r=>r.json());
+
+  if(currentCat!=="ALL"){
+    rows=rows.filter(r=>r.driver_skill===currentCat);
+  }
+
+  if(!rows.length){
+    lastRaceBody.innerHTML=`<tr><td colspan="5">No hay datos en esta categoría</td></tr>`;
+    bestLapsBody.innerHTML=`<tr><td colspan="3">No hay datos en esta categoría</td></tr>`;
+    destroyCharts();
+    return;
+  }
+
+  lastRaceBody.innerHTML="";
+
+  rows.forEach(r=>{
+    lastRaceBody.innerHTML+=`
+      <tr>
+      <td>${r.position}</td>
+      <td>${r.driver_name}</td>
+      <td>${r.driver_skill||"-"}</td>
+      <td>${r.laps}</td>
+      <td>${r.points}</td>
+      </tr>`;
+  });
+
+  drawLastRaceChart(rows);
+  drawBestLaps(rows);
+}
+
+
+// ================= MEJORES VUELTAS =================
+function drawBestLaps(rows){
+
+  const sorted=[...rows].sort((a,b)=>a.best_lap_ms-b.best_lap_ms);
+
+  bestLapsBody.innerHTML="";
+
+  sorted.slice(0,5).forEach(r=>{
+    bestLapsBody.innerHTML+=`
+    <tr>
+    <td>${r.driver_name}</td>
+    <td>${r.driver_skill||"-"}</td>
+    <td>${(r.best_lap_ms/1000).toFixed(3)} s</td>
+    </tr>`;
+  });
+
+}
+
+
+// ================= STANDINGS =================
+async function loadStandings(){
+
+  const s=await fetch(`${API_BASE}/championships/${champId}/standings`).then(r=>r.json());
+
+  const filtered=currentCat==="ALL"?s:s.filter(x=>x.driver_skill===currentCat);
+
+  drawStandingsChart(filtered);
+  drawPodiosPorCategoria(s);
+  drawEvolution(s);
+}
+
+
+// ================= PODIOS =================
+async function drawPodiosPorCategoria(standings){
+
+  podiumGrid.innerHTML="";
+
+  const levelCats=categories.filter(c=>c.code!=="ALL");
+
+  const cats=currentCat==="ALL"?levelCats:levelCats.filter(c=>c.code===currentCat);
+
+  for(const cat of cats){
+
+    const list=standings.filter(x=>x.driver_skill===cat.code).slice(0,3);
+
+    if(!list.length) continue;
+
+    const col=document.createElement("div");
+    col.className="podium-col";
+    col.innerHTML=`<h3>${cat.name}</h3><div class="podium-inner"></div>`;
+    podiumGrid.appendChild(col);
+
+    const cont=col.querySelector(".podium-inner");
+
+    for(let i=0;i<3;i++){
+
+      const r=list[i];
+
+      if(!r){cont.innerHTML+=`<div class="step">-</div>`;continue;}
+
+      const d=await getDriver(r.racecontrol_driver_id);
+
+      cont.innerHTML+=`
+      <div class="step ${i===0?"gold":i===1?"silver":"bronze"}">
+      ${d.photo_url?`<img src="${d.photo_url}">`:""}
+      <p><b>${i+1}º</b></p>
+      <p>${r.driver_name}</p>
+      <p>${r.total_points} pts</p>
+      </div>`;
+    }
+  }
+
+}
+
+
+// ================= CHARTS =================
+function destroyCharts(){
+  standingsChartObj?.destroy();
+  lastRaceChartObj?.destroy();
+  evolutionChartObj?.destroy();
+}
+
+function drawStandingsChart(data){
+
+  standingsChartObj?.destroy();
+
+  standingsChartObj=new Chart(standingsChart,{
+    type:"bar",
+    data:{
+      labels:data.map(d=>d.driver_name),
+      datasets:[{data:data.map(d=>d.total_points)}]
+    },
+    options:{responsive:true,plugins:{legend:{display:false}}}
+  });
+}
+
+function drawLastRaceChart(rows){
+
+  lastRaceChartObj?.destroy();
+
+  lastRaceChartObj=new Chart(lastRaceChart,{
+    type:"bar",
+    data:{
+      labels:rows.map(r=>r.driver_name),
+      datasets:[{data:rows.map(r=>r.points)}]
+    },
+    options:{responsive:true,plugins:{legend:{display:false}}}
+  });
+}
+
+
+// ================= EVOLUCIÓN (OPTIMIZADA) =================
+async function drawEvolution(standings){
+
+  evolutionChartObj?.destroy();
+
+  const top5=standings.slice(0,5);
+
+  const races=await fetch(`${API_BASE}/championships/${champId}/races`).then(r=>r.json());
+
+  const labels=races.map(r=>"R"+r.round_id);
+
+  const allResults={};
+
+  for(const race of races){
+    allResults[race.id]=await fetch(
+      `${API_BASE}/championships/${champId}/races/${race.id}/results`
+    ).then(r=>r.json());
+  }
+
+  const datasets=[];
+
+  for(const driver of top5){
+
+    const data=[];
+
+    for(const race of races){
+
+      const row=allResults[race.id]
+        .find(x=>x.racecontrol_driver_id===driver.racecontrol_driver_id);
+
+      data.push(row?row.points:0);
+    }
+
+    const d=await getDriver(driver.racecontrol_driver_id);
+
+    datasets.push({label:d.name,data});
+  }
+
+  evolutionChartObj=new Chart(evolutionChart,{
+    type:"line",
+    data:{labels,datasets},
+    options:{responsive:true}
+  });
+
+}
+
+
+// ================= PENALIZACIONES =================
+async function loadPenalties(){
+
+  const p=await fetch(`${API_BASE}/championships/${champId}/penalties/history`).then(r=>r.json());
+
+  penaltiesList.innerHTML="";
+
+  if(!p.length){
+    penaltiesList.innerHTML=`<li>No hay penalizaciones</li>`;
+    return;
+  }
+
+  p.slice(0,5).forEach(x=>{
+    penaltiesList.innerHTML+=`<li>${x.driver_name} — ${x.points} pts — ${x.reason}</li>`;
+  });
+}
+
+
+// ================= GLOBAL =================
+async function refreshDashboard(){
+  await loadLastRace();
+  await loadStandings();
+  await loadPenalties();
+}
+
+loadCategories().then(refreshDashboard);
+
+</script>
+</body>
+</html>
