@@ -1,4 +1,11 @@
 const net = require("net");
+
+const RUN_MODE = (process.env.RUN_MODE || "local").toLowerCase();
+if (RUN_MODE !== "local") {
+  console.log("🌍 RUN_MODE=cloud → crononetListener NO se inicia");
+  module.exports = {};
+  return;
+}
 const processPacket = require("./processPacket");
 
 let activeListeners = {};
