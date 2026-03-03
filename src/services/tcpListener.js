@@ -1,9 +1,21 @@
 const net = require("net");
 const pool = require("../lib/db");
+const RUN_MODE = (process.env.RUN_MODE || "cloud").toLowerCase();
 
+if (RUN_MODE !== "local") {
+  console.log("🌍 RUN_MODE=cloud → tcpListener desactivado");
+  module.exports = {};
+  return;
+}
 let activeListeners = {};
 
 function startDecoderListener(point) {
+  const RUN_MODE = (process.env.RUN_MODE || "local").toLowerCase();
+  if (RUN_MODE !== "local") {
+    console.log("🌍 RUN_MODE=cloud → TCPListener NO se inicia");
+    return;
+  }
+
   const key = `${point.decoder_ip}:${point.decoder_port}`;
 
   // Si ya está escuchando, ignorar
@@ -21,8 +33,6 @@ function startDecoderListener(point) {
       const raw = data.toString().trim();
       console.log(`📥 Paquete recibido (${point.name}):`, raw);
 
-      // Ejemplo de formato: "CAR:12345;TIME:12345678"
-      // Adáptalo según tu decoder real
       const parsed = parseDecoderData(raw);
 
       if (parsed) {
@@ -57,7 +67,6 @@ function startDecoderListener(point) {
 
   activeListeners[key] = server;
 }
-
 function parseDecoderData(raw) {
   try {
     // Ejemplo de formato CronoNet

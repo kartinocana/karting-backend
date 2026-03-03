@@ -54,9 +54,9 @@ const RUN_MODE = (process.env.RUN_MODE || "local").toLowerCase();
 if (RUN_MODE === "local") {
   const { startCronoNetServer } = require("./src/cronoNet");
   startCronoNetServer(io);
-  log("🟢 RUN_MODE=local → CronoNet ACTIVADO");
+  console.log("RUN_MODE=local -> CronoNet ACTIVADO");
 } else {
-  log("🌍 RUN_MODE=cloud → CronoNet DESACTIVADO");
+  console.log("RUN_MODE=cloud -> CronoNet DESACTIVADO");
 }
 
 // -------------------------------------------
@@ -64,8 +64,9 @@ if (RUN_MODE === "local") {
 // -------------------------------------------
 const PORT = process.env.PORT || 4000;
 
-server.listen(PORT, "0.0.0.0", () => {
-  log(`🚀 Backend running on port ${PORT} (IPv4 forced)`);
+server.listen(PORT, () => {
+  log(`🚀 Backend running on port ${PORT}`);
 });
+
 
 

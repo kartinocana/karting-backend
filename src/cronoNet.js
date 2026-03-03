@@ -284,6 +284,12 @@ async function reconcileServers(tlsOptionsOrNull) {
 // PUBLIC API
 // ==========================
 function startCronoNetServer(socketIO) {
+  const RUN_MODE = (process.env.RUN_MODE || "local").toLowerCase();
+  if (RUN_MODE !== "local") {
+    console.log("🌍 RUN_MODE=cloud → CronoNet NO se inicia");
+    return;
+  }
+
   io = socketIO || null;
   const tlsOptionsOrNull = loadTlsOptionsOrNull();
 
@@ -302,8 +308,5 @@ function startCronoNetServer(socketIO) {
 module.exports = {
   startCronoNetServer,
 };
-
-
-
 
 
