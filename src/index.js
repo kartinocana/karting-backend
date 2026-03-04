@@ -67,7 +67,74 @@ app.use("/api", require("./routes/championshipBridge"));
 
 const championshipRounds = require("./routes/championshipRounds");
 app.use("/api/championships", championshipRounds);
+// =======================
+// ☁️ INGEST OUTBOX (CronoNet -> Cloud)  [PRO]
+// =======================
+const pool = require("../db"); // ajusta si tu db.js está en otra ruta
 
+app.post("/api/ingest/outbox", async (req, res) => {
+  try {
+    // Auth simple por clave compartida
+    const key = req.headers["x-crononet-key"];
+    if (!process.env.CLOUD_INGEST_KEY || key !== process.env.CLOUD_INGEST_KEY) {
+      return res.status(401).json({ ok: false, error: "unauthorized" });
+    }
+
+    const { stream_id, batch_id, events } = req.body || {};
+    if (!stream_id || !Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ ok: false, error: "bad_request" });
+    }
+
+    // Insert idempotente + emitir live
+    let maxSeq = 0;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      for (const e of events) {
+        const event_id = e?.event_id;
+        const seq = Number(e?.seq);
+        const payload = e?.payload;
+
+        if (!event_id || !Number.isFinite(seq) || !payload) continue;
+
+        // Guardar idempotente
+        await client.query(
+          `
+          INSERT INTO crononet_inbox(event_id, stream_id, seq, payload_json)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (event_id) DO NOTHING
+          `,
+          [String(event_id), String(stream_id), seq, payload]
+        );
+
+        if (seq > maxSeq) maxSeq = seq;
+
+        // Emitir a webs (RaceControl/TV/etc.)
+        if (ioInstance) {
+          ioInstance.emit("raw-pass", payload);
+        }
+      }
+
+      await client.query("COMMIT");
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    } finally {
+      client.release();
+    }
+
+    return res.json({
+      ok: true,
+      batch_id: batch_id || null,
+      acks: [{ stream_id, seq_upto: maxSeq }],
+    });
+  } catch (e) {
+    console.error("❌ ingest/outbox error:", e);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
 // =======================
 // LIVE TIMING JSON
 // =======================
