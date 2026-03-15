@@ -51,6 +51,7 @@ app.use("/api/maintenance/jobs", require("./routes/maintenanceJobs"));
 app.use("/api/forms", require("./routes/forms"));
 app.use("/api/driver-levels", require("./routes/driver-levels"));
 app.use("/api/email", require("./routes/sessionReport"));
+app.use("/api/laps", require("./routes/laps"));
 // =======================
 // 🏆 CAMPEONATOS
 // =======================
