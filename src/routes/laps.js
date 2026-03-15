@@ -55,6 +55,7 @@ async function lapsHasParticipantIdColumn() {
 // GET /api/laps?session_id=123
 // LISTAR VUELTAS
 // =====================================================
+console.log("✅ LAPS ROUTER LOADED");
 router.get("/", async (req, res) => {
   try {
     const { session_id } = req.query;
