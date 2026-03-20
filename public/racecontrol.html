@@ -1087,25 +1087,6 @@ persistState();
 renderLapByLap();
 });
 
-async function persistLap(lap) {
-  try {
-    const res = await fetch(`${API}/laps`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(lap)
-    });
-
-    if (!res.ok) {
-      console.warn("⚠️ Backend no guardó la vuelta:", await res.text());
-    } else {
-      const data = await res.json();
-      console.log("💾 Vuelta guardada:", data);
-    }
-
-  } catch (e) {
-    console.warn("⚠️ Error enviando vuelta al backend:", e);
-  }
-}
 
 
 // ================= UTILIDADES =================
