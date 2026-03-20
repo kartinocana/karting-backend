@@ -1051,33 +1051,35 @@ socket.on("raw-pass", async data => {
     return;
   }
 
-// =======================
-// 💾 GUARDAR EN BACKEND
-// =======================
-try {
-  const lapPayload = {
-    participant_id: p.id,
-    session_id: currentSession?.id,
-    kart_id: p.kart_id,
-    driver_id: p.driver_id,
-    transponder: String(p.transponder || transponder || "").trim(),
-    timestamp: new Date(now).toISOString(),
-    lap_time_ms: lapMs
-  };
+  const lapMs = now - prev;
+  lastLapAtByPid[pid] = now;
 
-  const r = await fetch(`${API}/timing-input/crononet`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(lapPayload)
-  });
+  const p = participantsCache.find(x => x.id === pid);
+  if (!p) return;
 
-  if (!r.ok) {
-    console.warn("⚠️ Backend no guardó vuelta:", await r.text());
-  } else {
-    console.log("✅ Vuelta guardada (RAW):", lapPayload);
+  p.lapTimes ??= [];
+
+  const currentMinLapMs = Number(minLapMs || 0);
+  const isValid = !currentMinLapMs || lapMs >= currentMinLapMs;
+
+p.lapTimes.push({ ms: lapMs, valid: isValid });
+
+if (isValid) {
+  p.laps = (p.laps || 0) + 1;
+  p.lastLapMs = lapMs;
+  p.bestLapMs = p.bestLapMs ? Math.min(p.bestLapMs, lapMs) : lapMs;
+  p.totalMs = (p.totalMs || 0) + lapMs;
+
+  // 🔊 pitido al paso por meta
+  playBeep(80, 1350);
+
+  // 🗣️ locución de la vuelta
+  announceLap(p, lapMs);
+
+  // 🏆 mejor vuelta personal
+  if (announceBestLapEnabled && p.bestLapMs === lapMs) {
+    announceBestLap(p, lapMs);
   }
-} catch (e) {
-  console.warn("⚠️ Error enviando vuelta:", e);
 }
 
 renderLiveFromLatest();
@@ -1085,6 +1087,25 @@ persistState();
 renderLapByLap();
 });
 
+async function persistLap(lap) {
+  try {
+    const res = await fetch(`${API}/laps`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lap)
+    });
+
+    if (!res.ok) {
+      console.warn("⚠️ Backend no guardó la vuelta:", await res.text());
+    } else {
+      const data = await res.json();
+      console.log("💾 Vuelta guardada:", data);
+    }
+
+  } catch (e) {
+    console.warn("⚠️ Error enviando vuelta al backend:", e);
+  }
+}
 
 
 // ================= UTILIDADES =================
@@ -5209,35 +5230,4 @@ document.getElementById("voice-enabled").checked = false;
 document.getElementById("beep-enabled").checked = true;
 document.getElementById("announce-bestlap").checked = true;
 document.getElementById("announce-lastlap").checked = true;
-document.getElementById("announce-flags").checked = true;
-
-document.getElementById("voice-mode").value = "kart";
-document.getElementById("voice-rate").value = "1";
-document.getElementById("voice-volume").value = "1";
-document.getElementById("beep-volume").value = "0.5";
-
-voiceEnabled = false;
-beepEnabled = true;
-announceBestLapEnabled = true;
-announceLastLapEnabled = true;
-announceFlagsEnabled = true;
-
-voiceMode = "kart";
-voiceRate = 1;
-voiceVolume = 1;
-beepVolume = 0.5;
-</script>
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
+document.getElementById("annou
