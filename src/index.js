@@ -23,11 +23,11 @@ app.setSocketIO = (io) => {
 // =======================
 const liveState = {
   session: null,
-  participants: [],               // lista base
-  byParticipantId: {},            // pid -> participante live
-  byTransponder: {},              // transponder -> pid
-  lastPassAtByPid: {},            // pid -> timestamp último paso
-  lastRawPassAtByTransponder: {}, // transponder -> timestamp último raw pass
+  participants: [],
+  byParticipantId: {},
+  byTransponder: {},
+  lastPassAtByPid: {},
+  lastRawPassAtByTransponder: {},
   classification: [],
   bestLapTime: null,
   updatedAt: null,
@@ -292,12 +292,14 @@ let lastLedAt = null;
 // =======================
 // MIDDLEWARES
 // =======================
-app.use(cors({
-  origin: true,
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 
-app.options('*', cors());
+app.options("*", cors());
 app.use(express.json());
 
 // =======================
@@ -321,12 +323,8 @@ app.use("/api/maintenance/jobs", require("./routes/maintenanceJobs"));
 app.use("/api/forms", require("./routes/forms"));
 app.use("/api/driver-levels", require("./routes/driver-levels"));
 app.use("/api/email", require("./routes/sessionReport"));
-<<<<<<< HEAD
-app.use("/api/laps", require("./routes/laps"));
-=======
-app.use("/api/live", require("./routes/liveKart"));
 
->>>>>>> fbac4d0 (Fix Render startup and web config)
+
 // =======================
 // CAMPEONATOS
 // =======================
@@ -343,11 +341,10 @@ app.use("/api", require("./routes/championshipBridge"));
 
 const championshipRounds = require("./routes/championshipRounds");
 app.use("/api/championships", championshipRounds);
-// =======================
-// ☁️ INGEST OUTBOX (CronoNet -> Cloud)  [PRO]
-// =======================
-const pool = require("../db"); // ajusta si tu db.js está en otra ruta
 
+// =======================
+// ☁️ INGEST OUTBOX (CronoNet -> Cloud) [PRO]
+// =======================
 app.post("/api/ingest/outbox", async (req, res) => {
   try {
     // Auth simple por clave compartida
@@ -411,6 +408,7 @@ app.post("/api/ingest/outbox", async (req, res) => {
     return res.status(500).json({ ok: false, error: e.message });
   }
 });
+
 // =======================
 // LIVE TIMING JSON
 // =======================
@@ -492,66 +490,6 @@ app.get("/api/health/db", async (req, res) => {
       message: e.message,
       code: e.code,
     });
-  }
-});
-
-// =======================
-// OUTBOX INGEST
-// =======================
-app.post("/api/ingest/outbox", async (req, res) => {
-  const key = req.headers["x-crononet-key"];
-
-  if (!process.env.CLOUD_INGEST_KEY || key !== process.env.CLOUD_INGEST_KEY) {
-    return res.status(401).json({ ok: false, error: "unauthorized" });
-  }
-
-  const { stream_id, batch_id, events } = req.body || {};
-
-  if (!stream_id || !Array.isArray(events) || events.length === 0) {
-    return res.status(400).json({ ok: false, error: "bad_request" });
-  }
-
-  let maxSeq = 0;
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    for (const e of events) {
-      const eventId = e?.event_id;
-      const seq = Number(e?.seq);
-      const payload = e?.payload;
-
-      if (!eventId || !Number.isFinite(seq) || !payload) continue;
-
-      await client.query(
-        `
-        INSERT INTO crononet_inbox(event_id, stream_id, seq, payload_json)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (event_id) DO NOTHING
-        `,
-        [eventId, stream_id, seq, payload]
-      );
-
-      if (seq > maxSeq) maxSeq = seq;
-
-      if (ioInstance) {
-        ioInstance.emit("raw-pass", payload);
-      }
-    }
-
-    await client.query("COMMIT");
-
-    return res.json({
-      ok: true,
-      acks: [{ stream_id, seq_upto: maxSeq }],
-      batch_id: batch_id || null,
-    });
-  } catch (e) {
-    await client.query("ROLLBACK");
-    return res.status(500).json({ ok: false, error: e.message });
-  } finally {
-    client.release();
   }
 });
 
