@@ -317,7 +317,7 @@ app.use("/api/laps", require("./routes/laps"));
 app.use("/api/maintenance", require("./routes/maintenance"));
 app.use("/api/maintenance/alerts", require("./routes/maintenanceAlerts"));
 app.use("/api/timing-points", require("./routes/timingPoints"));
-app.use("/api/timing-input", require("./routes/timingInput"));
+// app.use("/api/timing-input", require("./routes/timingInput"));
 app.use("/api/maintenance/rules", require("./routes/maintenanceRules"));
 app.use("/api/maintenance/jobs", require("./routes/maintenanceJobs"));
 app.use("/api/forms", require("./routes/forms"));
