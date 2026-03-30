@@ -1935,54 +1935,7 @@ if (exists) {
     }
   }
 
-async function selectSession(id) {
-  saveLastSelectedSession(id);
-
-  const prevSession = currentSession ? { ...currentSession } : null;
-
-  try {
-    const res = await fetch(`${API}/sessions/${id}`);
-    if (!res.ok) return;
-
-    currentSession = await res.json();
-
-    handleRemoteRaceStartIfNeeded(prevSession, currentSession);
-
-    racePaused = false;
-    pauseStartedAt = null;
-    racePausedElapsed = 0;
-    manualStopBlocksAutoStart = false;
-
-    updateSessionHeader(currentSession);
-    document.getElementById("pill-session-id").textContent = currentSession.id;
-
-    await loadParticipants();
-
-    if (participantsCache.length === 0) {
-      await loadParticipants();
-    }
-
-    if (currentSession.status === "running") startRaceTimer();
-    else stopRaceTimer();
-
-    const wasRemoteStart =
-      prevSession?.status !== "running" &&
-      currentSession?.status === "running";
-
-    if (!wasRemoteStart) {
-      const restored = restoreStateIfNeeded();
-      if (restored) {
-        console.log("♻️ Estado restaurado desde localStorage");
-        renderLiveFromLatest();
-        renderLapByLap();
-      }
-    }
-
-  } catch (err) {
-    console.error("❌ Error cargando sesión:", err);
-  }
-}
-
+npm run dev
 
   function updateSessionHeader(session) {
     const nameEl = document.getElementById("session-name");
