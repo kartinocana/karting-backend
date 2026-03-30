@@ -4,31 +4,300 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 
+const pool = require("../db");
 const { runMaintenanceEngine } = require("./services/maintenanceEngine");
 
 const app = express();
 
-const PORT = process.env.PORT || 3000;
-
-
 // =======================
-// SOCKET.IO INSTANCE (INYECTADA DESDE server.js)
+// SOCKET.IO INSTANCE
 // =======================
 let ioInstance = null;
 
-// Permite que server.js inyecte el io aquí
 app.setSocketIO = (io) => {
   ioInstance = io;
 };
 
-// ====== LED STATE (para CronoLed UI) ======
+// =======================
+// LIVE STATE EN MEMORIA
+// =======================
+const liveState = {
+  session: null,
+  participants: [],               // lista base
+  byParticipantId: {},            // pid -> participante live
+  byTransponder: {},              // transponder -> pid
+  lastPassAtByPid: {},            // pid -> timestamp último paso
+  lastRawPassAtByTransponder: {}, // transponder -> timestamp último raw pass
+  classification: [],
+  bestLapTime: null,
+  updatedAt: null,
+};
+
+const PASS_DEBOUNCE_MS = Number(process.env.PASS_DEBOUNCE_MS || 2000);
+const MIN_LAP_MS = Number(process.env.MIN_LAP_MS || 0);
+
+// =======================
+// HELPERS LIVE
+// =======================
+function normalizeTransponder(value) {
+  return String(value || "").trim();
+}
+
+function formatSafeNumber(n, fallback = null) {
+  const x = Number(n);
+  return Number.isFinite(x) ? x : fallback;
+}
+
+function cloneParticipantBase(p = {}) {
+  return {
+    id: p.id,
+    driver_id: p.driver_id ?? null,
+    kart_id: p.kart_id ?? null,
+    driver_name: p.driver_name ?? p.name ?? "",
+    kart_number: p.kart_number ?? null,
+    kart_name: p.kart_name ?? "",
+    racerNumber: p.racerNumber ?? p.kart_number ?? p.driver_number ?? null,
+    transponder: normalizeTransponder(p.transponder),
+    weight: p.weight ?? null,
+    category: p.category ?? null,
+    nickname: p.nickname ?? "-",
+
+    lapTimes: [],
+    laps: 0,
+    lastLapMs: null,
+    bestLapMs: null,
+    totalMs: 0,
+  };
+}
+
+function getLiveParticipants() {
+  return Object.values(liveState.byParticipantId);
+}
+
+function getGlobalBestLap() {
+  let best = null;
+  for (const p of getLiveParticipants()) {
+    const t = Number(p.bestLapMs);
+    if (!Number.isFinite(t) || t <= 0) continue;
+    if (best == null || t < best) best = t;
+  }
+  return best;
+}
+
+function buildClassification() {
+  const sorted = [...getLiveParticipants()].sort((a, b) => {
+    const lapsA = Number(a.laps || 0);
+    const lapsB = Number(b.laps || 0);
+
+    if (lapsB !== lapsA) return lapsB - lapsA;
+
+    const totalA = Number.isFinite(a.totalMs) ? a.totalMs : Number.MAX_SAFE_INTEGER;
+    const totalB = Number.isFinite(b.totalMs) ? b.totalMs : Number.MAX_SAFE_INTEGER;
+    return totalA - totalB;
+  });
+
+  const leader = sorted[0] || null;
+  const leaderLaps = leader?.laps || 0;
+  const leaderTime = leader?.totalMs || 0;
+
+  return sorted.map((p, i) => {
+    let gap = "-";
+    if (i > 0) {
+      if ((p.laps || 0) === leaderLaps) {
+        gap = (p.totalMs || 0) - leaderTime;
+      } else {
+        gap = `+${leaderLaps - (p.laps || 0)} LAP`;
+      }
+    }
+
+    let diff = "-";
+    if (i > 0) {
+      const prev = sorted[i - 1];
+      if ((p.laps || 0) === (prev.laps || 0)) {
+        diff = (p.totalMs || 0) - (prev.totalMs || 0);
+      } else {
+        diff = `+${(prev.laps || 0) - (p.laps || 0)} LAP`;
+      }
+    }
+
+    return {
+      participant_id: p.id,
+      pos: i + 1,
+      racerName: p.driver_name || p.kart_name || "-",
+      racerNumber: p.racerNumber ?? p.kart_number ?? "-",
+      racerTransponder: p.transponder || "-",
+      nickname: p.nickname ?? "-",
+      category: p.category ?? "-",
+      weight: p.weight ?? null,
+      lapcount: p.laps || 0,
+      lastTime: p.lastLapMs ?? null,
+      best: p.bestLapMs ?? null,
+      time: p.totalMs ?? null,
+      gap,
+      diff,
+      laps_ms: p.lapTimes || [],
+    };
+  });
+}
+
+function refreshLiveStateDerived() {
+  liveState.bestLapTime = getGlobalBestLap();
+  liveState.classification = buildClassification();
+  liveState.updatedAt = Date.now();
+}
+
+function emitLiveUpdate() {
+  refreshLiveStateDerived();
+
+  const payload = {
+    session: liveState.session,
+    updatedAt: liveState.updatedAt,
+    bestLapTime: liveState.bestLapTime,
+    classification: liveState.classification,
+    participants: getLiveParticipants(),
+  };
+
+  if (ioInstance) {
+    ioInstance.emit("live-update", payload);
+  }
+}
+
+function resetLiveState() {
+  liveState.session = null;
+  liveState.participants = [];
+  liveState.byParticipantId = {};
+  liveState.byTransponder = {};
+  liveState.lastPassAtByPid = {};
+  liveState.lastRawPassAtByTransponder = {};
+  liveState.classification = [];
+  liveState.bestLapTime = null;
+  liveState.updatedAt = Date.now();
+}
+
+function bootstrapLiveState({ session, participants }) {
+  resetLiveState();
+
+  liveState.session = session || null;
+  liveState.participants = Array.isArray(participants) ? participants : [];
+
+  for (const raw of liveState.participants) {
+    const p = cloneParticipantBase(raw);
+    if (p.id == null) continue;
+
+    liveState.byParticipantId[p.id] = p;
+
+    if (p.transponder) {
+      liveState.byTransponder[p.transponder] = p.id;
+    }
+  }
+
+  emitLiveUpdate();
+}
+
+function processRawPass({ transponder, timestamp }) {
+  const trx = normalizeTransponder(transponder);
+  const ts = formatSafeNumber(timestamp, Date.now());
+
+  if (!trx) {
+    return { ok: false, reason: "missing_transponder" };
+  }
+
+  // Anti-rebote por transponder
+  const lastRaw = liveState.lastRawPassAtByTransponder[trx];
+  if (Number.isFinite(lastRaw) && ts - lastRaw < PASS_DEBOUNCE_MS) {
+    return {
+      ok: false,
+      reason: "duplicate_raw_pass",
+      transponder: trx,
+      timestamp: ts,
+      deltaMs: ts - lastRaw,
+    };
+  }
+
+  liveState.lastRawPassAtByTransponder[trx] = ts;
+
+  const pid = liveState.byTransponder[trx];
+  if (!pid) {
+    return {
+      ok: false,
+      reason: "unknown_transponder",
+      transponder: trx,
+      timestamp: ts,
+    };
+  }
+
+  const p = liveState.byParticipantId[pid];
+  if (!p) {
+    return {
+      ok: false,
+      reason: "participant_not_found",
+      participant_id: pid,
+      transponder: trx,
+      timestamp: ts,
+    };
+  }
+
+  const prev = liveState.lastPassAtByPid[pid];
+
+  // Primer paso: solo referencia
+  if (!Number.isFinite(prev)) {
+    liveState.lastPassAtByPid[pid] = ts;
+
+    p.lapTimes.push({ ms: 0, valid: false });
+
+    emitLiveUpdate();
+
+    return {
+      ok: true,
+      kind: "reference_pass",
+      participant_id: pid,
+      transponder: trx,
+      timestamp: ts,
+    };
+  }
+
+  const lapMs = ts - prev;
+  liveState.lastPassAtByPid[pid] = ts;
+
+  const isValid = !MIN_LAP_MS || lapMs >= MIN_LAP_MS;
+
+  p.lapTimes.push({ ms: lapMs, valid: isValid });
+
+  if (isValid) {
+    p.laps = (p.laps || 0) + 1;
+    p.lastLapMs = lapMs;
+    p.bestLapMs = p.bestLapMs ? Math.min(p.bestLapMs, lapMs) : lapMs;
+    p.totalMs = (p.totalMs || 0) + lapMs;
+  }
+
+  emitLiveUpdate();
+
+  return {
+    ok: true,
+    kind: "lap",
+    participant_id: pid,
+    transponder: trx,
+    timestamp: ts,
+    lapMs,
+    valid: isValid,
+  };
+}
+
+// =======================
+// LED STATE
+// =======================
 let lastLedPro = null;
 let lastLedAt = null;
 
 // =======================
-// MIDDLEWARES GLOBALES
+// MIDDLEWARES
 // =======================
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
+
+app.options('*', cors());
 app.use(express.json());
 
 // =======================
@@ -42,6 +311,7 @@ app.use("/api/penalties", require("./routes/penalties"));
 app.use("/api/rankings", require("./routes/rankings"));
 app.use("/api/transponders", require("./routes/transponders"));
 app.use("/api/race-control", require("./routes/raceControl"));
+app.use("/api/laps", require("./routes/laps"));
 app.use("/api/maintenance", require("./routes/maintenance"));
 app.use("/api/maintenance/alerts", require("./routes/maintenanceAlerts"));
 app.use("/api/timing-points", require("./routes/timingPoints"));
@@ -51,9 +321,14 @@ app.use("/api/maintenance/jobs", require("./routes/maintenanceJobs"));
 app.use("/api/forms", require("./routes/forms"));
 app.use("/api/driver-levels", require("./routes/driver-levels"));
 app.use("/api/email", require("./routes/sessionReport"));
+<<<<<<< HEAD
 app.use("/api/laps", require("./routes/laps"));
+=======
+app.use("/api/live", require("./routes/liveKart"));
+
+>>>>>>> fbac4d0 (Fix Render startup and web config)
 // =======================
-// 🏆 CAMPEONATOS
+// CAMPEONATOS
 // =======================
 app.use("/api/championships", require("./routes/championships"));
 app.use("/api", require("./routes/championshipImport"));
@@ -151,23 +426,38 @@ app.post("/api/tiempos", (req, res) => {
 });
 
 // =======================
-// MANTENIMIENTO AUTOMÁTICO
+// MAINTENANCE
 // =======================
 app.get("/api/maintenance/run-engine", async (req, res) => {
-  await runMaintenanceEngine();
-  res.json({ status: "engine_completed" });
+  try {
+    await runMaintenanceEngine();
+    res.json({ status: "engine_completed" });
+  } catch (e) {
+    console.error("❌ MaintenanceEngine manual run failed:", e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
-setInterval(runMaintenanceEngine, 5 * 60 * 1000);
+setInterval(async () => {
+  try {
+    await runMaintenanceEngine();
+  } catch (e) {
+    console.error("❌ MaintenanceEngine failed:", e);
+  }
+}, 5 * 60 * 1000);
 
 // =======================
-// ✅ LED CONTROL API (GUARDA ESTADO + EMITE SOCKET)
+// LED CONTROL API
 // =======================
 app.post("/api/led", (req, res) => {
   const { pro } = req.body || {};
-  if (pro == null) return res.status(400).json({ ok: false, error: "Missing pro" });
+
+  if (pro == null) {
+    return res.status(400).json({ ok: false, error: "Missing pro" });
+  }
 
   const proNum = Number(pro);
+
   if (!Number.isFinite(proNum)) {
     return res.status(400).json({ ok: false, error: "Invalid pro" });
   }
@@ -175,11 +465,8 @@ app.post("/api/led", (req, res) => {
   lastLedPro = proNum;
   lastLedAt = Date.now();
 
-  // ✅ Emite a TODAS las pantallas conectadas (aunque estén en segundo plano)
   if (ioInstance) {
     ioInstance.emit("led-pro", { pro: lastLedPro, at: lastLedAt });
-  } else {
-    console.warn("⚠️ ioInstance no está seteado (server.js no llamó app.setSocketIO)");
   }
 
   return res.json({ ok: true, pro: lastLedPro, at: lastLedAt });
@@ -193,13 +480,166 @@ app.get("/api/led-state", (req, res) => {
 });
 
 // =======================
-// ESTÁTICOS (AL FINAL — IMPORTANTE)
+// HEALTH DB
 // =======================
+app.get("/api/health/db", async (req, res) => {
+  try {
+    const r = await pool.query("SELECT NOW() as now");
+    return res.json({ ok: true, now: r.rows[0].now });
+  } catch (e) {
+    return res.status(500).json({
+      ok: false,
+      message: e.message,
+      code: e.code,
+    });
+  }
+});
+
+// =======================
+// OUTBOX INGEST
+// =======================
+app.post("/api/ingest/outbox", async (req, res) => {
+  const key = req.headers["x-crononet-key"];
+
+  if (!process.env.CLOUD_INGEST_KEY || key !== process.env.CLOUD_INGEST_KEY) {
+    return res.status(401).json({ ok: false, error: "unauthorized" });
+  }
+
+  const { stream_id, batch_id, events } = req.body || {};
+
+  if (!stream_id || !Array.isArray(events) || events.length === 0) {
+    return res.status(400).json({ ok: false, error: "bad_request" });
+  }
+
+  let maxSeq = 0;
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    for (const e of events) {
+      const eventId = e?.event_id;
+      const seq = Number(e?.seq);
+      const payload = e?.payload;
+
+      if (!eventId || !Number.isFinite(seq) || !payload) continue;
+
+      await client.query(
+        `
+        INSERT INTO crononet_inbox(event_id, stream_id, seq, payload_json)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (event_id) DO NOTHING
+        `,
+        [eventId, stream_id, seq, payload]
+      );
+
+      if (seq > maxSeq) maxSeq = seq;
+
+      if (ioInstance) {
+        ioInstance.emit("raw-pass", payload);
+      }
+    }
+
+    await client.query("COMMIT");
+
+    return res.json({
+      ok: true,
+      acks: [{ stream_id, seq_upto: maxSeq }],
+      batch_id: batch_id || null,
+    });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ ok: false, error: e.message });
+  } finally {
+    client.release();
+  }
+});
+
+// =======================
+// LIVE BOOTSTRAP
+// =======================
+app.post("/api/live/bootstrap", (req, res) => {
+  try {
+    const session = req.body?.session || null;
+    const participants = Array.isArray(req.body?.participants) ? req.body.participants : [];
+
+    bootstrapLiveState({ session, participants });
+
+    return res.json({
+      ok: true,
+      session: liveState.session,
+      participants: getLiveParticipants().length,
+      updatedAt: liveState.updatedAt,
+    });
+  } catch (e) {
+    console.error("❌ Error en /api/live/bootstrap:", e);
+    return res.status(500).json({ ok: false, error: "bootstrap_failed" });
+  }
+});
+
+app.get("/api/live/state", (req, res) => {
+  return res.json({
+    ok: true,
+    session: liveState.session,
+    updatedAt: liveState.updatedAt,
+    bestLapTime: liveState.bestLapTime,
+    classification: liveState.classification,
+    participants: getLiveParticipants(),
+    meta: {
+      transponders: Object.keys(liveState.byTransponder).length,
+      debounceMs: PASS_DEBOUNCE_MS,
+      minLapMs: MIN_LAP_MS,
+    },
+  });
+});
+
+// =======================
+// CRONONET DIRECT PASS
+// =======================
+app.post("/api/crononet/pass", (req, res) => {
+  try {
+    const body = req.body || {};
+    const transponder = normalizeTransponder(body.transponder);
+    const timestamp = formatSafeNumber(body.timestamp, Date.now());
+
+    if (!transponder) {
+      return res.status(400).json({ ok: false, error: "missing_transponder" });
+    }
+
+    const rawPayload = { transponder, timestamp };
+
+    if (ioInstance) {
+      ioInstance.emit("raw-pass", rawPayload);
+    }
+
+    const result = processRawPass(rawPayload);
+
+    return res.json({
+      ok: true,
+      raw: rawPayload,
+      result,
+      bestLapTime: liveState.bestLapTime,
+      classificationSize: liveState.classification.length,
+    });
+  } catch (e) {
+    console.error("❌ Error en /api/crononet/pass:", e);
+    return res.status(500).json({ ok: false, error: "fail" });
+  }
+});
+
+// =======================
+// ESTÁTICOS
+// =======================
+app.use(express.static("public"));
 app.use(express.static(path.join(__dirname, "../public")));
 
 app.use(
   "/pits_admin_app",
   express.static(path.join(__dirname, "../public/pits_admin_app"))
 );
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/racecontrol.html"));
+});
 
 module.exports = app;

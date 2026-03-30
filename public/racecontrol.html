@@ -3083,7 +3083,8 @@ const AUTO = {
 let postFinishLockUntil = 0;
 
 // tiempo de seguridad configurable (ms)
-let postFinishSafetyMs = Number(localStorage.getItem("postFinishSafetyMs") || 0) || 15000; // 15s por defecto
+let postFinishSafetyMs = Number(localStorage.getItem("postFinishSafetyMs") || 0) || 15000; // 15s por defect
+let postFinishCountdownInterval = null;
 
 function setPostFinishSafetyMs(seconds) {
   const s = Math.max(0, Number(seconds) || 0);
