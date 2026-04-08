@@ -6,41 +6,7 @@
   <title>Race Control Pro</title>
   <!-- v10i -->
   <img id="track-logo" src="logo.jpg" style="display:none">
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js">
-// ===== Exponer handlers globales para onclick del HTML =====
-Object.assign(window, {
-  startRace,
-  pauseRace,
-  finishRace,
-  sendManualEmailsToAll,
-  togglePanel,
-  toggleVoicePanel,
-  importSessionToChampionship,
-  setPostFinishSafetyMs,
-  ledSendPro,
-  saveMinLap,
-  exportClassificationPDF_v2,
-  exportLapByLapPDF,
-  exportOnePageReportPDF,
-  showPresentation,
-  toggleLapsPanel,
-  openWebOutput,
-  togglePrintOptions,
-  addEntryToGrid,
-  startCountdown,
-  resetCountdown,
-  closeGridEditor,
-  saveGridEdit,
-  editLapFromTiming,
-  deleteLapFromTiming,
-  closeLapsPanel,
-  closeLedConfigModal,
-  saveLedButtonConfigFromModal,
-  resetLedButtonsConfig,
-  onLedButtonClick
-});
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
   <style>
 :root { font-family: system-ui, sans-serif; color-scheme: dark; }
@@ -6199,6 +6165,45 @@ clearLedDebugPanel();
 document.getElementById("led-config-modal")?.addEventListener("click", (e) => { if (e.target?.id === "led-config-modal") closeLedConfigModal(); });
 document.getElementById("led-button-group")?.addEventListener("contextmenu", (e) => { const btn = e.target.closest("[data-led-id]"); if (!btn) return; e.preventDefault(); openLedConfigModal(btn.getAttribute("data-led-id")); });
 loadLedRoutingConfig().catch(console.warn);
+
+
+/* ===== Exponer handlers globales para onclick del HTML ===== */
+Object.assign(window, {
+  startRace,
+  pauseRace,
+  finishRace,
+  sendManualEmailsToAll,
+  togglePanel,
+  toggleVoicePanel,
+  importSessionToChampionship,
+  setPostFinishSafetyMs,
+  ledSendPro,
+  saveMinLap,
+  exportClassificationPDF_v2,
+  exportLapByLapPDF,
+  exportOnePageReportPDF,
+  showPresentation,
+  toggleLapsPanel,
+  openWebOutput,
+  togglePrintOptions,
+  addEntryToGrid,
+  startCountdown,
+  resetCountdown,
+  closeGridEditor,
+  saveGridEdit,
+  editLapFromTiming,
+  deleteLapFromTiming,
+  closeLapsPanel,
+  closeLedConfigModal,
+  saveLedButtonConfigFromModal,
+  resetLedButtonsConfig,
+  onLedButtonClick,
+  toggleSessionPicker,
+  toggleFinishedSessions,
+  selectSession,
+  hideRCTOAST
+});
+
 </script>
 </body>
 </html>
